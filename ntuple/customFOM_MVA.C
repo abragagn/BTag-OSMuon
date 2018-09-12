@@ -5,7 +5,7 @@ float calculateFOM( TString eta = "B", TString addCut = "", bool verbose = false
 	gStyle->SetOptFit(0); 	gStyle->SetStatBorderSize(0);
 	gStyle->SetStatX(.49); 	gStyle->SetStatY(.89);
 
-	TFile *f = new TFile("ntuBs2016.root");
+	TFile *f = new TFile("ntuBs2017.root");
 	TTree *t = (TTree*)f ->Get("PDsecondTree");
 
 	int nBins=50;
