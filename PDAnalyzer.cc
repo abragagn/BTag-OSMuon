@@ -99,7 +99,8 @@ void PDAnalyzer::beginJob() {
 
     setupReader( mvaMethod );
 
-    SetBpMassRange(5.15, 5.40);
+    if(process=="BsJPsiPhi") SetBpMassRange(5.15, 5.40);
+    if(process=="BuJPsiK") SetBpMassRange(5.0, 5.50);
 
     return;
 
@@ -229,7 +230,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(iSsB<0) return false;
 
     int iJPsi = (subVtxFromSV(iSsB)).at(0);
-    vector <int> tkJpsi = tracksFromSV(iJPsi) ;
+    vector <int> tkJpsi = tracksFromSV(iJPsi);
     vector <int> tkSsB = tracksFromSV(iSsB);
 
     TLorentzVector t = GetTLorentzVecFromJpsiX(iSsB);
@@ -267,7 +268,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             for( unsigned int i=0; i<tkSsB.size(); ++i ){
             if( tkSsB[i] == tkJpsi[0] || tkSsB[i] == tkJpsi[1] ) continue;
             ssBLund = trkCharge->at(tkSsB[i]) > 0 ? +521 : -521;
-            } 
+            }
         }
     }
 
@@ -397,8 +398,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
         vector <int> jet_pfcs = pfCandFromJet( iJet );
 
-        
-        TVector3 vjet(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
+        TVector3 vjet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
         TVector3 vmu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
 
 /*
@@ -418,7 +418,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         energyRatio = muoE->at(iMuon) / jetE->at(iJet);
 
         vjet -= vmu;
-        PtRel = muoPt->at( iMuon ) * vmu.Unit() * vjet.Unit();
+        PtRel = muoPt->at( iMuon ) * (vmu.Unit() * vjet.Unit());
 
         jetSize = jet_pfcs.size();
 
