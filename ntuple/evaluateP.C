@@ -96,9 +96,9 @@ float CountEventsWithFit(TH1 *hist, TString process){
     func->SetParLimits(2, 0, hist->GetEntries());
     func->SetParLimits(3, 0, hist->GetEntries());
 
-    func->SetParLimits(4, 0, sigma*3);
-    func->SetParLimits(5, 0, sigma*3);
-    func->SetParLimits(6, 0, sigma*3);
+    func->SetParLimits(4, 0, sigma*2);
+    func->SetParLimits(5, 0, sigma*2);
+    func->SetParLimits(6, 0, sigma*2);
 
     func->SetParLimits(7, 0, hist->GetBinContent(nBins_-1)*1.5);
     func->SetParLimits(8, 0, hist->GetBinContent(nBins_-1));
