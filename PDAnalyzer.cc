@@ -37,7 +37,6 @@ PDAnalyzer::PDAnalyzer() {
 
     setUserParameter( "process", "BsJPsiPhi" );
     setUserParameter( "useTightSel", "f" );
-    setUserParameter( "useHLT", "f" );
 
     setUserParameter( "minPtMuon", "2." );
     setUserParameter( "maxEtaMuon", "2.4" );
@@ -74,7 +73,6 @@ void PDAnalyzer::beginJob() {
     getUserParameter( "verbose", verbose );
 
     getUserParameter( "process", process );
-    getUserParameter( "useTightSel", useTightSel );
     getUserParameter( "useHLT", useHLT );
 
     getUserParameter( "minPtMuon", minPtMuon );
@@ -225,9 +223,15 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
-    int iSsB = GetCandidate(process, useTightSel);
-
+    int iSsB = GetCandidate(process, false);
     if(iSsB<0) return false;
+
+    bool isTight = false;
+    int iSsBtight = GetCandidate(process, true);
+    if(iSsBtight >= 0){
+        isTight = true;
+        iSsB = iSsBtight;
+    }
 
     int iJPsi = (subVtxFromSV(iSsB)).at(0);
     vector <int> tkJpsi = tracksFromSV(iJPsi);
@@ -286,6 +290,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->ssHLT) = whichHLT;
     (tWriter->ssbDist3D) = svtDist3D->at(iSsB);
     (tWriter->ssbSigma3D) = svtSigma3D->at(iSsB);
+    (tWriter->ssbIsTight) = isTight;
 
     hmass_ssB->Fill(svtMass->at(iSsB));
     
