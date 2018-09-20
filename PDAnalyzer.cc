@@ -246,10 +246,12 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     int genBindex = -1;
     int ssBLund = 0;
     int tagMix = -1;
+    float evtWeight = 1;
 
     if(use_gen){
         for( unsigned int i=0 ; i<genId->size() ; ++i ){
             unsigned int Code = abs(genId->at(i));
+            if(TagMixStatus( i ) == 2) continue;
             if( Code == 511 || Code == 521 || Code == 531 || Code == 541 || Code == 5122 ) ListLongLivedB.push_back(i);
         }
 
@@ -261,7 +263,9 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         if(genBindex<0) return false;
         ssBLund = genId->at(genBindex);
         if((process=="BsJPsiPhi") && (abs(ssBLund)!=531)) return false;
-        if((process=="BuJPsiK") && (abs(ssBLund)!=521)) return false;
+        if((process=="") && (abs(ssBLund)!=521)) return false;
+
+        for(auto it:ListLongLivedB) if(genId->at(it)==-ssBLund) evtWeight = 2;
 
         tagMix = TagMixStatus( genBindex );
         if(tagMix == 2) return false;
@@ -288,11 +292,12 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->ssbMass) = svtMass->at(iSsB);
     (tWriter->ssbLund) = ssBLund;
     (tWriter->ssHLT) = whichHLT;
-    (tWriter->ssbDist3D) = svtDist3D->at(iSsB);
-    (tWriter->ssbSigma3D) = svtSigma3D->at(iSsB);
+    (tWriter->ssbDist3D) = GetL3D(iSsB, iSsPV, t);
+    //(tWriter->ssbSigma3D) = svtSigma3D->at(iSsB);
     (tWriter->ssbIsTight) = isTight;
+    (tWriter->evtWeight) = evtWeight;
 
-    hmass_ssB->Fill(svtMass->at(iSsB));
+    hmass_ssB->Fill(svtMass->at(iSsB), evtWeight);
     
 //-----------------------------------------OPPOSITE SIDE-----------------------------------------
 
@@ -341,7 +346,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 
     (tWriter->osMuon) = 1;
-    hmass_ssB_os->Fill(svtMass->at(iSsB));
+    hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
 
     //INDICES
     int iMuon = bestMuIndex;
@@ -499,28 +504,28 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if( muoAncestor >=0 ){
 
         if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) ){
-            hmass_ssB_osCC->Fill(svtMass->at(iSsB));
+            hmass_ssB_osCC->Fill(svtMass->at(iSsB), evtWeight);
             (tWriter->osMuonChargeInfo) = 1 ;
         }else{
-            hmass_ssB_osWC->Fill(svtMass->at(iSsB));
+            hmass_ssB_osWC->Fill(svtMass->at(iSsB), evtWeight);
             (tWriter->osMuonChargeInfo) = 0 ;
         }
 
     }else{
 
-        hmass_ssB_osRC->Fill(svtMass->at(iSsB));
+        hmass_ssB_osRC->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonChargeInfo) = 2 ;
     
     }
 
     //TAG
     if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) ){ 
-        hmass_ssB_osRT->Fill(svtMass->at(iSsB));
+        hmass_ssB_osRT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 1 ;
     }
 
     if( TMath::Sign(1, ssBLund) != -1*trkCharge->at(itkmu) ){
-        hmass_ssB_osWT->Fill(svtMass->at(iSsB));
+        hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 0 ;
     }
 
@@ -556,7 +561,7 @@ void PDAnalyzer::endJob() {
     cout<<"CC   WC  RC"<<endl;
     cout<< CountEventsWithFit(hmass_ssB_osCC, process)/tot<<" "<< CountEventsWithFit(hmass_ssB_osWC, process)/tot<<" "<< CountEventsWithFit(hmass_ssB_osRC, process)/tot<<endl<<endl;
 
-    cout<<"#Bp  eff%    w%  P%"<<endl;
+    cout<<"#B    eff%    w%    P%"<<endl;
     cout<< CountEventsWithFit(hmass_ssB, process)<<" "<<eff*100<<" "<<w*100<<" "<<power*100<<endl;
 
 

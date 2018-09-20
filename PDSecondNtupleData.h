@@ -68,15 +68,16 @@ class PDSecondNtupleData: public virtual TreeWrapper {
         setBranch( "muoHowMany", &muoHowMany, "muoHowMany/I", &b_muoHowMany );
 
         setBranch( "evtNumber", &evtNumber, "evtNumber/I", &b_evtNumber );
+        setBranch( "evtWeight", &evtWeight, "evtWeight/F", &b_evtWeight );
         setBranch( "ssHLT", &ssHLT, "ssHLT/I", &b_ssHLT );
 
     }
 
-    float ssbPt, ssbEta, ssbPhi, ssbMass, JPsiMass, ssbDxy, ssbExy, ssbDz, ssbEz, ssbDist3D, ssbSigma3D;
+    float ssbPt, ssbEta, ssbPhi, ssbMass, JPsiMass, ssbDxy, ssbExy, ssbDz, ssbEz, ssbDist3D, ssbSigma3D, evtWeight;
     int ssbSVT, ssbPVT, ssbLund, evtNumber, ssHLT, ssbIsTight;
 
     TBranch *b_ssbPt, *b_ssbEta, *b_ssbPhi, *b_ssbMass, *b_JPsiMass, *b_ssbDxy, *b_ssbExy, *b_ssbDz, *b_ssbEz, *b_ssbDist3D, *b_ssbSigma3D;
-    TBranch *b_ssbSVT, *b_ssbPVT, *b_ssbLund, *b_evtNumber, *b_ssHLT, *b_ssbIsTight;
+    TBranch *b_ssbSVT, *b_ssbPVT, *b_ssbLund, *b_evtNumber, *b_ssHLT, *b_ssbIsTight, *b_evtWeight;
 
 
     int muoLund, muoAncestor, muoCharge;
