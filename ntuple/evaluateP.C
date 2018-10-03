@@ -6,7 +6,7 @@ float min_, max_;
 int nBins_;
 float CountEventsWithFit(TH1 *hist, TString process);
 
-void evaluateP(TString file = "./BsMC/ntuBsMC2016.root", TCut cut = "", TString suffix = "")
+void evaluateP(TString file = "./BsMC/ntuBsMC2016.root", TString cut = "1", TString cutEvt = "1", TString suffix = "")
 {
     TFile *f = new TFile(file);
     TTree *t = (TTree*)f ->Get("PDsecondTree");
@@ -33,11 +33,14 @@ void evaluateP(TString file = "./BsMC/ntuBsMC2016.root", TCut cut = "", TString 
     TH1F *ssB_RT    = new TH1F( "ssB_RT", "ssB_RT", nBins_, min_, max_ );
     TH1F *ssB_WT    = new TH1F( "ssB_WT", "ssB_WT", nBins_, min_, max_ );
 
-    TCut base = cut + "osMuon==1";
-    TCut cutRT = base + "osMuonTag==1";
-    TCut cutWT = base + "osMuonTag==0";
+    //TString base = "evtWeight*(" + cut + "&&osMuon==1";
+    TString base = "(" + cut + "&&osMuon==1";
+    base += "&&" + cutEvt;
+    TString cutRT = base + "&&osMuonTag==1)";
+    TString cutWT = base + "&&osMuonTag==0)";
 
-    t->Project("ssB", "ssbMass", "");
+
+    t->Project("ssB", "ssbMass", cutEvt);
     t->Project("ssB_RT", "ssbMass", cutRT );
     t->Project("ssB_WT", "ssbMass", cutWT );
 
@@ -96,19 +99,22 @@ float CountEventsWithFit(TH1 *hist, TString process){
     func->SetParLimits(2, 0, hist->GetEntries());
     func->SetParLimits(3, 0, hist->GetEntries());
 
-    func->SetParLimits(4, 0, sigma*3);
-    func->SetParLimits(5, 0, sigma*3);
-    func->SetParLimits(6, 0, sigma*3);
+    func->SetParLimits(4, 0, sigma*2);
+    func->SetParLimits(5, 0, sigma*2);
+    func->SetParLimits(6, 0, sigma*2);
 
     func->SetParLimits(7, 0, hist->GetBinContent(nBins_-1)*1.5);
     func->SetParLimits(8, 0, hist->GetBinContent(nBins_-1));
     func->SetParLimits(9, 10, 1e3);
     func->SetParLimits(10, 5.0, mean);
 
+    func->SetNpx(2000);
+
     auto c1 = new TCanvas();
     hist->Draw("");
     hist->SetMinimum(0.1);
-    hist->Fit("func","MRL");
+    hist->Fit("func","MRLQ");
+
 
     TF1 *fit = hist->GetFunction("func");
 
@@ -144,6 +150,7 @@ float CountEventsWithFit(TH1 *hist, TString process){
     TString name = hist->GetName(); 
 
     c1->Print(dir + name + "_" + year + suffix_ + ".pdf");
+    c1->Print(dir + name + "_" + year + suffix_ + ".png");
 
     float nEvt = fit->GetParameter(1);
     nEvt += fit->GetParameter(2);

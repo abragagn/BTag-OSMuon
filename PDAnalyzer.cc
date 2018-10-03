@@ -196,13 +196,13 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         for(int i=0; i<nHLTStatus; ++i){
             if(!hltAccept->at( i )) continue;
             if((hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v) || (hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) 
-                {hltFlag = true; whichHLT += pow(2, 1);}
+                {hltFlag = true; whichHLT += 1<<1;}
 
             if(hltPath->at( i ) == PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v) 
-                {hltFlag = true; whichHLT += pow(2, 2);}
+                {hltFlag = true; whichHLT += 1<<2;}
 
             if(hltPath->at( i ) == PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v) 
-                {hltFlag = true; whichHLT += pow(2, 3);}
+                {hltFlag = true; whichHLT += 1<<3;}
         }
         if(!hltFlag) return false;
     }
@@ -212,10 +212,10 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         for(int i=0; i<nHLTStatus; ++i){
             if(!hltAccept->at( i )) continue;
             if((hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v) || (hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) 
-                {hltFlag = true; whichHLT += pow(2, 1);}
+                {hltFlag = true; whichHLT += 1<<1;}
 
             if(hltPath->at( i ) == PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v) 
-                {hltFlag = true; whichHLT += pow(2, 3);}
+                {hltFlag = true; whichHLT += 1<<3;}
         }
         if(!hltFlag) return false;
     }
