@@ -15,8 +15,7 @@
 #include "TFile.h"
 
 // additional features
-#include "PDSecondNtupleWriter.h"   // second ntuple
-//#include "DataSetFilter.cc"       // dataset filter
+#include "PDSecondNtupleWriter.h"
 #include "PDMuonVar.cc"
 #include "PDSoftMuonMvaEstimator.cc"
 #include "AlbertoUtil.cc"
@@ -30,7 +29,6 @@ PDAnalyzer::PDAnalyzer() {
 
     std::cout << "new PDAnalyzer" << std::endl;
 
-    // user parameters are set as names associated to a string, 
     // default values can be set in the analyzer class contructor
 
     setUserParameter( "verbose", "f" );
@@ -91,7 +89,6 @@ void PDAnalyzer::beginJob() {
     getUserParameter( "ptCut", ptCut ); //needed for paolo's code for unknow reasons
 
 /// additional features
-/// DataSetFilter::beginJob(); // dataset filter
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
@@ -532,20 +529,14 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->evtNumber)=( event_tot );
     tWriter->fill();
 
-// to skim the N-tuple "uncomment" the following line
-//  if ( flag ) fillSkim();
-
     return true;
 
 }
 
 
 void PDAnalyzer::endJob() {
-// to skim the N-tuple "uncomment" the following line
-//  closeSkim();
 
 // additional features
-//  DataSetFilter::endJob();    // dataset filter
     tWriter->close();   // second ntuple
 
     cout<<endl;
@@ -582,20 +573,6 @@ void PDAnalyzer::save() {
     return;
 }
 
-
-// to plot some histogram immediately after the ntuple loop
-// "uncomment" the following lines
-/*
-void PDAnalyzer::plot() {
-    TCanvas* can = new TCanvas( "muoPt", "muoPt", 800, 600 );
-    can->cd();
-    can->Divide( 1, 2 );
-    can->cd( 1 );
-    hptmumax->Draw();
-    hptmu2nd->Draw();
-    return;
-}
-*/
 
 
 // ======MY FUNCTIONS===============================================================================
