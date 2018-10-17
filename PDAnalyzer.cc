@@ -94,8 +94,8 @@ void PDAnalyzer::beginJob() {
 
     setupReader( mvaMethod );
 
-    if(process=="BsJPsiPhi") SetBpMassRange(5.15, 5.40);
-    if(process=="BuJPsiK") SetBpMassRange(5.0, 5.50);
+    if(process=="BsJPsiPhi") SetBsMassRange(5.15, 5.50);
+    if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
 
     return;
 
@@ -135,7 +135,7 @@ void PDAnalyzer::book() {
     hmass_ssB_osWC  = new TH1D( "hmass_ssB_osWC", "hmass_ssB_osWC", nbin, min, max );
 
     autoSavedObject =
-    hTest   = new TH1D( "hTest", "hTest", 500, -0.3, 0.3 );
+    hTest   = new TH1D( "hTest", "hTest", 5, 0, 5 );
 
     autoSavedObject =
     hTest2   = new TH1D( "hTest2", "hTest2", 500, -0.3, 0.3 );
@@ -247,26 +247,31 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
     if(use_gen){
         for( unsigned int i=0 ; i<genId->size() ; ++i ){
-            unsigned int Code = abs(genId->at(i));
+            if( IsB(i) ) ListB.push_back(i);
             if(TagMixStatus( i ) == 2) continue;
+            unsigned int Code = abs(genId->at(i));
             if( Code == 511 || Code == 521 || Code == 531 || Code == 541 || Code == 5122 ) ListLongLivedB.push_back(i);
         }
 
-        for( unsigned int i=0 ; i<genId->size() ; ++i ){
-            if( IsB(i) ) ListB.push_back(i);
-        }
+        if(ListLongLivedB.size()!=2) return false; //only evts with two b hadrons            
 
         genBindex = GetClosestGenLongLivedB( t.Eta(), t.Phi(), t.Pt(), &ListLongLivedB);
         if(genBindex<0) return false;
+
         ssBLund = genId->at(genBindex);
         if((process=="BsJPsiPhi") && (abs(ssBLund)!=531)) return false;
-        if((process=="") && (abs(ssBLund)!=521)) return false;
-
-        for(auto it:ListLongLivedB) if(genId->at(it)==-ssBLund) evtWeight = 2;
+        if((process=="BuJPsiK") && (abs(ssBLund)!=521)) return false;
 
         tagMix = TagMixStatus( genBindex );
         if(tagMix == 2) return false;
         if(tagMix == 1) ssBLund*=-1;
+
+        for(auto it:ListLongLivedB){
+            if(it == genBindex) continue;
+            if(abs(genId->at(it)) == abs(ssBLund)) evtWeight = 2;
+        }
+
+
     }else{
         if(process=="BsJPsiPhi") ssBLund = ((double)rand() / (RAND_MAX)) < 0.5 ? +531 : -531; //this should not be used
         if(process=="BuJPsiK"){
@@ -276,6 +281,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             }
         }
     }
+
 
     int iSsPV = GetBestPV(iSsB, t);
     if(iSsPV < 0) return false;
@@ -289,7 +295,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->ssbMass) = svtMass->at(iSsB);
     (tWriter->ssbLund) = ssBLund;
     (tWriter->ssHLT) = whichHLT;
-    (tWriter->ssbDist3D) = GetL3D(iSsB, iSsPV, t);
+    //(tWriter->ssbDist3D) = GetL3D(iSsB, iSsPV, t);
     //(tWriter->ssbSigma3D) = svtSigma3D->at(iSsB);
     (tWriter->ssbIsTight) = isTight;
     (tWriter->evtWeight) = evtWeight;
@@ -512,7 +518,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
         hmass_ssB_osRC->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonChargeInfo) = 2 ;
-    
     }
 
     //TAG
@@ -554,8 +559,6 @@ void PDAnalyzer::endJob() {
 
     cout<<"#B    eff%    w%    P%"<<endl;
     cout<< CountEventsWithFit(hmass_ssB, process)<<" "<<eff*100<<" "<<w*100<<" "<<power*100<<endl;
-
-
 
     return;
 }
