@@ -33,11 +33,12 @@ void evaluateP(TString file = "./BsMC/ntuBsMC2016.root", TString cut = "1", TStr
     TH1F *ssB_RT    = new TH1F( "ssB_RT", "ssB_RT", nBins_, min_, max_ );
     TH1F *ssB_WT    = new TH1F( "ssB_WT", "ssB_WT", nBins_, min_, max_ );
 
-    //TString base = "evtWeight*(" + cut + "&&osMuon==1";
-    TString base = "(" + cut + "&&osMuon==1";
+    TString base = "evtWeight*(" + cut + "&&osMuon==1";
     base += "&&" + cutEvt;
     TString cutRT = base + "&&osMuonTag==1)";
     TString cutWT = base + "&&osMuonTag==0)";
+
+    cutEvt =  "evtWeight*(" + cutEvt + ")";
 
 
     t->Project("ssB", "ssbMass", cutEvt);

@@ -187,34 +187,21 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 //------------------------------------------------HLT---------------------------------------
 
-    int whichHLT = 0;
-    if(useHLT && (process=="BsJPsiPhi")){
-        bool hltFlag = false;
-        for(int i=0; i<nHLTStatus; ++i){
-            if(!hltAccept->at( i )) continue;
-            if((hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v) || (hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) 
-                {hltFlag = true; whichHLT += 1<<1;}
+    bool jpsimu = false;
+    bool jpsitktk = false;
+    bool jpsitk = false;
 
-            if(hltPath->at( i ) == PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v) 
-                {hltFlag = true; whichHLT += 1<<2;}
-
-            if(hltPath->at( i ) == PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v) 
-                {hltFlag = true; whichHLT += 1<<3;}
+    if(useHLT){
+        if(process=="BsJPsiPhi"){
+            if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
+            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v)) jpsitktk =  true;
+            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
+            if( !(jpsimu || jpsitktk || jpsitk) ) return false;
+        }else if(process=="BuJPsiK"){
+            if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
+            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
+            if( !(jpsimu || jpsitk) ) return false;
         }
-        if(!hltFlag) return false;
-    }
-
-    if(useHLT && (process=="BuJPsiK")){
-        bool hltFlag = false;
-        for(int i=0; i<nHLTStatus; ++i){
-            if(!hltAccept->at( i )) continue;
-            if((hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v) || (hltPath->at( i ) == PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) 
-                {hltFlag = true; whichHLT += 1<<1;}
-
-            if(hltPath->at( i ) == PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v) 
-                {hltFlag = true; whichHLT += 1<<3;}
-        }
-        if(!hltFlag) return false;
     }
 
 
@@ -234,7 +221,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     vector <int> tkJpsi = tracksFromSV(iJPsi);
     vector <int> tkSsB = tracksFromSV(iSsB);
 
-    TLorentzVector t = GetTLorentzVecFromJpsiX(iSsB);
+    TLorentzVector tB = GetTLorentzVecFromJpsiX(iSsB);
 
     //generation information
 
@@ -255,7 +242,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
         if(ListLongLivedB.size()!=2) return false; //only evts with two b hadrons            
 
-        genBindex = GetClosestGenLongLivedB( t.Eta(), t.Phi(), t.Pt(), &ListLongLivedB);
+        genBindex = GetClosestGenLongLivedB( tB.Eta(), tB.Phi(), tB.Pt(), &ListLongLivedB);
         if(genBindex<0) return false;
 
         ssBLund = genId->at(genBindex);
@@ -283,21 +270,33 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }
 
 
-    int iSsPV = GetBestPV(iSsB, t);
+    int iSsPV = GetBestPV(iSsB, tB);
     if(iSsPV < 0) return false;
 
     //FILLING SS
-    (tWriter->ssbPt) = t.Pt();
-    (tWriter->ssbEta) = t.Eta();
-    (tWriter->ssbPhi) = t.Phi();
+    (tWriter->ssbPt) = tB.Pt();
+    (tWriter->ssbEta) = tB.Eta();
+    (tWriter->ssbPhi) = tB.Phi();
+    (tWriter->ssbMass) = svtMass->at(iSsB);
+    (tWriter->ssbIsTight) = isTight;
+
+    (tWriter->ssbLxy) = GetCt2D(tB, iSsB) / (MassBs/tB.Pt());
+    (tWriter->ssbCt2D) = GetCt2D(tB, iSsB);
+    (tWriter->ssbCt2DErr) = GetCt2DErr(tB, iSsB, iSsPV);
+    (tWriter->ssbCt2DSigmaUnit) = GetCt2D(tB, iSsB, iSsPV)/GetCt2DErr(tB, iSsB, iSsPV);
+    (tWriter->ssbCt3D) = GetCt3D(tB, iSsB, iSsPV);
+    (tWriter->ssbCt3DErr) = GetCt3DErr(tB, iSsB, iSsPV);
+    (tWriter->ssbCt3DSigmaUnit) = GetCt3D(tB, iSsB, iSsPV)/GetCt3DErr(tB, iSsB, iSsPV);
+
     (tWriter->ssbSVT) = iSsB;
     (tWriter->ssbPVT) = iSsPV;
-    (tWriter->ssbMass) = svtMass->at(iSsB);
+    
     (tWriter->ssbLund) = ssBLund;
-    (tWriter->ssHLT) = whichHLT;
-    //(tWriter->ssbDist3D) = GetL3D(iSsB, iSsPV, t);
-    //(tWriter->ssbSigma3D) = svtSigma3D->at(iSsB);
-    (tWriter->ssbIsTight) = isTight;
+
+    (tWriter->hltJpsiMu) = jpsimu;
+    (tWriter->hltJpsiTrkTrk) = jpsitktk;
+    (tWriter->hltJpsiTrk) = jpsitk;
+    
     (tWriter->evtWeight) = evtWeight;
 
     hmass_ssB->Fill(svtMass->at(iSsB), evtWeight);
@@ -485,7 +484,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoLund) = muoLund;
     (tWriter->muoAncestor) = muoAncestor; 
 
-    (tWriter->muoDR_B) = deltaR(t.Eta(), t.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
+    (tWriter->muoDR_B) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     (tWriter->muoPFIso) = GetMuoPFiso(iMuon);
 
     (tWriter->muoJetPt) = jetpt;
