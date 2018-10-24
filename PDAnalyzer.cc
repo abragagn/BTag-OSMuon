@@ -207,11 +207,11 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
-    int iSsB = GetCandidate(process, false);
+    int iSsB = GetCandidate(process);
     if(iSsB<0) return false;
 
     bool isTight = false;
-    int iSsBtight = GetCandidate(process, true);
+    int iSsBtight = GetTightCandidate(process, 0., 0.);
     if(iSsBtight >= 0){
         isTight = true;
         iSsB = iSsBtight;

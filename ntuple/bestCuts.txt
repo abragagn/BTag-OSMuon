@@ -1,7 +1,0 @@
----- 2016 ----
-mvaBarrel > 0.26 (S 95%, B 45%)
-mvaEndcap > 0.60 (S 90%, B 25%)
-
----- 2017 ----
-mvaBarrel > 0.62 (S 90%, B 25%)
-mvaEndcap > 0.60 (S 85%, B 15%)
