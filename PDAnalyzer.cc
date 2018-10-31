@@ -211,7 +211,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(iSsB<0) return false;
 
     bool isTight = false;
-    int iSsBtight = GetTightCandidate(process, 0., 0.);
+    int iSsBtight = GetTightCandidate(process, -0.1, -0.1);
     if(iSsBtight >= 0){
         isTight = true;
         iSsB = iSsBtight;
@@ -484,14 +484,14 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoLund) = muoLund;
     (tWriter->muoAncestor) = muoAncestor; 
 
-    (tWriter->muoDR_B) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
+    (tWriter->muoDrB) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     (tWriter->muoPFIso) = GetMuoPFiso(iMuon);
 
     (tWriter->muoJetPt) = jetpt;
-    (tWriter->muoPtRel) = PtRel;
-    (tWriter->muoDrJet) = drJet;
-    (tWriter->muoEnergyRatio) = energyRatio;
-    (tWriter->muoQJet) = jetQ;
+    (tWriter->muoJetPtRel) = PtRel;
+    (tWriter->muoJetDr) = drJet;
+    (tWriter->muoJetEnergyRatio) = energyRatio;
+    (tWriter->muoJetQ) = jetQ;
     (tWriter->muoJetCSV) = jetcsv;
     (tWriter->muoJetDFprob) = jetdfprob;
     (tWriter->muoJetSize) = jetSize;

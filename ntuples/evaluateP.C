@@ -3,7 +3,7 @@ TString process;
 TString dir = "./";
 TString suffix_;
 float min_, max_;
-int nBins_;
+int nBins_=50;
 float CountEventsWithFit(TH1 *hist, TString process);
 
 void evaluateP(TString file = "./BsMC/ntuBsMC2016.root",  TString cutEvt = "", TString cut = "", TString suffix = "")
@@ -17,13 +17,11 @@ void evaluateP(TString file = "./BsMC/ntuBsMC2016.root",  TString cutEvt = "", T
         process = "BsJPsiPhi";
         min_ = 5.25;
         max_ = 5.50;
-        nBins_ = 250;
     }
     if(file.Contains("Bp")){
         process = "BuJPsiK";
         min_ = 5.00;
         max_ = 5.50;
-        nBins_ = 250;
     }
 
     TString dirPath( file(0, file.Index("ntu")) ); 
