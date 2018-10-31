@@ -391,7 +391,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     qCone /= ptCone;
     qCone *= trkCharge->at(itkmu); //removing dependency from the muon charge sign
     
-    //Jet variables
+    //JET variables
     int iJet = trkJet->at(itkmu);
     if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
     TVector3 vMu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
@@ -407,31 +407,21 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 
     if(iJet>=0){
-
         vector <int> jet_pfcs = pfCandFromJet( iJet );
         TVector3 vJet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
-
         muoJetPt = jetPt->at(iJet);
-
         muoJetDr = deltaR(jetEta->at(iJet), jetPhi->at(iJet), muoEta->at( iMuon ), muoPhi->at(iMuon));
-        
         muoJetEnergyRatio = muoE->at(iMuon) / jetE->at(iJet);
-
         vJet -= vMu;
         muoJetPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vJet.Unit());
-
         muoJetSize = jet_pfcs.size();
-
         muoJetQ = GetJetCharge(iJet, kappa);
         muoJetQ *= trkCharge->at(itkmu); 
-
         muoJetCSV = jetCSV->at(iJet);
-
         muoJetDFprob = GetJetProbb(iJet);
-
     }
 
-    //Svt variables
+    //SVT variables
 
     int osSvt = GetBestSvtFromTrack(itkmu);
 
@@ -445,31 +435,57 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     float muoSvtPt = -1;
 
     if(osSvt>=0){
-
         vector <int> tkSvt = tracksFromSV(osSvt);
         TVector3 vSvt;
-
         for(auto it:tkSvt){
             TVector3 v;
             v.SetXYZ(trkPx->at(it), trkPy->at(it), trkPz->at(it));
             vSvt += v;
         }
-
         muoSvtPt = vSvt.Pt();
-
         muoSvtDr = deltaR(vSvt.Eta(), vSvt.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-
         muoSvtEnergyRatio = -1;
         muoSvtCSV = -1;
         muoSvtDFprob = -1;
-
         vSvt -= vMu;
         muoSvtPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vSvt.Unit());
-        
         muoSvtSize = svtNTracks->at(osSvt);
         muoSvtQ = GetSvtCharge(osSvt, kappa);
-
+        muoSvtQ *= trkCharge->at(itkmu);
     }
+
+    //CONE variables
+
+    float muoConePtRel = -1;
+    float muoConeDr = -1;
+    float muoConeEnergyRatio = -1;
+    float muoConeCSV = -1;
+    float muoConeDFprob = -1;
+    float muoConeSize = 0;
+    float muoConeQ = -1;
+    float muoConePt = -1;
+
+    TLorentzVector tCone, tMu;
+    tCone.SetPtEtaPhiM(0.,0.,0.,0.);
+    tMu.SetPtEtaPhiM(muoPt->at( iMuon ), muoEta->at( iMuon ), muoPhi->at( iMuon ), MassMu);
+
+    for(int i=0; i<nPF; ++i){
+        if( deltaR(pfcEta->at( i ), pfcPhi->at( i ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > 0.4) continue;
+        TLorentzVector a;
+        a.SetPxPyPzE(pfcPx->at(i), pfcPy->at(i), pfcPz->at(i), pfcE->at(i));
+        tCone += a;
+        ++muoConeSize;
+    }
+
+    muoConePt = tCone.Pt();
+    muoConeDr = deltaR(tCone.Eta(), tCone.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
+    muoConeEnergyRatio = muoE->at(iMuon) / tCone.E();
+    muoConeCSV = -1;
+    muoConeDFprob = -1;
+    tCone -= tMu;
+    muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
+    muoConeQ = qCone;
+
 
     bool debugJet = false;
 
@@ -536,6 +552,14 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoSvtDFprob) = muoSvtDFprob;
     (tWriter->muoSvtSize) = muoSvtSize;
 
+    (tWriter->muoConePt) = muoConePt;
+    (tWriter->muoConePtRel) = muoConePtRel;
+    (tWriter->muoConeDr) = muoConeDr;
+    (tWriter->muoConeEnergyRatio) = muoConeEnergyRatio;
+    (tWriter->muoConeQ) = muoConeQ;
+    (tWriter->muoConeCSV) = muoConeCSV;
+    (tWriter->muoConeDFprob) = muoConeDFprob;
+    (tWriter->muoConeSize) = muoConeSize;
 
     //------------------------------------------------TAG------------------------------------------------
 
@@ -623,7 +647,7 @@ int PDAnalyzer::GetBestSvtFromTrack(int trkIndex )
 {
     vector <int> svtList = sVtsWithTrack( trkIndex );
     int index = -1;
-    float bestChi2 = 1e6;
+    float bestChi2 = 1e9;
 
     for(auto it : svtList){
         if( svtChi2->at(it)/svtNDOF->at(it) > bestChi2 ) continue;

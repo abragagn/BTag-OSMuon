@@ -82,6 +82,15 @@ void initTree() {
     setBranch( "muoSvtDFprob", &muoSvtDFprob, "muoSvtDFprob/F", &b_muoSvtDFprob );
     setBranch( "muoSvtSize", &muoSvtSize, "muoSvtSize/I", &b_muoSvtSize );
 
+    setBranch( "muoConePt", &muoConePt, "muoConePt/F", &b_muoConePt );
+    setBranch( "muoConePtRel", &muoConePtRel, "muoConePtRel/F", &b_muoConePtRel );
+    setBranch( "muoConeDr", &muoConeDr, "muoConeDr/F", &b_muoConeDr );
+    setBranch( "muoConeEnergyRatio", &muoConeEnergyRatio, "muoConeEnergyRatio/F", &b_muoConeEnergyRatio );
+    setBranch( "muoConeQ", &muoConeQ, "muoConeQ/F", &b_muoConeQ );
+    setBranch( "muoConeCSV", &muoConeCSV, "muoConeCSV/F", &b_muoConeCSV );
+    setBranch( "muoConeDFprob", &muoConeDFprob, "muoConeDFprob/F", &b_muoConeDFprob );
+    setBranch( "muoConeSize", &muoConeSize, "muoConeSize/I", &b_muoConeSize );
+
     setBranch( "muoQCone", &muoQCone, "muoQCone/F", &b_muoQCone );
     setBranch( "muoHowMany", &muoHowMany, "muoHowMany/I", &b_muoHowMany );
 
@@ -111,16 +120,22 @@ TBranch *b_muoLund, *b_muoAncestor, *b_muoSoftMvaValue;
 
 int osMuon, osMuonTag, osMuonChargeInfo;
 float muoDrB, muoDzPV, muoPFIso, muoQCone;
+int muoHowMany;
 
-int muoJetSize, muoHowMany;
+TBranch *b_osMuon, *b_osMuonTag, *b_osMuonChargeInfo, *b_muoDrB, *b_muoPFIso, *b_muoQCone, *b_muoDzPV, *b_muoHowMany;
+
+int muoJetSize;
 float muoJetPtRel, muoJetDr, muoJetEnergyRatio, muoJetQ, muoJetCSV, muoJetDFprob, muoJetPt;
 
 int muoSvtSize;
 float muoSvtPtRel, muoSvtDr, muoSvtEnergyRatio, muoSvtQ, muoSvtCSV, muoSvtDFprob, muoSvtPt;
 
-TBranch *b_osMuon, *b_osMuonTag, *b_osMuonChargeInfo, *b_muoDrB, *b_muoPFIso, *b_muoQCone, *b_muoDzPV, *b_muoHowMany;
+int muoConeSize;
+float muoConePtRel, muoConeDr, muoConeEnergyRatio, muoConeQ, muoConeCSV, muoConeDFprob, muoConePt;
+
 TBranch  *b_muoJetSize, *b_muoJetPtRel, *b_muoJetDr, *b_muoJetEnergyRatio, *b_muoJetQ, *b_muoJetCSV, *b_muoJetDFprob, *b_muoJetPt;
 TBranch  *b_muoSvtSize, *b_muoSvtPtRel, *b_muoSvtDr, *b_muoSvtEnergyRatio, *b_muoSvtQ, *b_muoSvtCSV, *b_muoSvtDFprob, *b_muoSvtPt;
+TBranch  *b_muoConeSize, *b_muoConePtRel, *b_muoConeDr, *b_muoConeEnergyRatio, *b_muoConeQ, *b_muoConeCSV, *b_muoConeDFprob, *b_muoConePt;
 
 private:
 
