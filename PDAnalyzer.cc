@@ -396,14 +396,14 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     int iJet = trkJet->at(itkmu);
     if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
 
-    float PtRel = -1;
-    float drJet = -1;
-    float energyRatio = -1;
-    float jetcsv = -1;
-    float jetdfprob = -1;
-    float jetSize = -1;
-    float jetQ = -1;
-    float jetpt = -1;
+    float muoJetPtRel = -1;
+    float muoJetDr = -1;
+    float muoJetEnergyRatio = -1;
+    float muoJetCSV = -1;
+    float muoJetDFprob = -1;
+    float muoJetSize = -1;
+    float muoJetQ = -1;
+    float muoJetPt = -1;
 
 
     if(iJet>=0){
@@ -413,33 +413,23 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         TVector3 vjet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
         TVector3 vmu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
 
-/*
-        TVector3 vjet(0,0,0);
-        float jetEn = 0;
-        for(int it:jet_pfcs){
-            jetEn += pfcE->at(it);
-            TVector3 v(pfcPx->at(it), pfcPy->at(it), pfcPz->at(it));
-            vjet += v;
-        }
-*/
+        muoJetPt = jetPt->at(iJet);
 
-        jetpt = jetPt->at(iJet);
-
-        drJet = deltaR(jetEta->at(iJet), jetPhi->at(iJet), muoEta->at( iMuon ), muoPhi->at(iMuon));
+        muoJetDr = deltaR(jetEta->at(iJet), jetPhi->at(iJet), muoEta->at( iMuon ), muoPhi->at(iMuon));
         
-        energyRatio = muoE->at(iMuon) / jetE->at(iJet);
+        muoJetEnergyRatio = muoE->at(iMuon) / jetE->at(iJet);
 
         vjet -= vmu;
-        PtRel = muoPt->at( iMuon ) * (vmu.Unit() * vjet.Unit());
+        muoJetPtRel = muoPt->at( iMuon ) * (vmu.Unit() * vjet.Unit());
 
-        jetSize = jet_pfcs.size();
+        muoJetSize = jet_pfcs.size();
 
-        jetQ = GetJetCharge(iJet, kappa);
-        jetQ *= trkCharge->at(itkmu); 
+        muoJetQ = GetJetCharge(iJet, kappa);
+        muoJetQ *= trkCharge->at(itkmu); 
 
-        jetcsv = jetCSV->at(iJet);
+        muoJetCSV = jetCSV->at(iJet);
 
-        jetdfprob = GetJetProbb(iJet);
+        muoJetDFprob = GetJetProbb(iJet);
 
     } 
 
@@ -487,14 +477,14 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoDrB) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     (tWriter->muoPFIso) = GetMuoPFiso(iMuon);
 
-    (tWriter->muoJetPt) = jetpt;
-    (tWriter->muoJetPtRel) = PtRel;
-    (tWriter->muoJetDr) = drJet;
-    (tWriter->muoJetEnergyRatio) = energyRatio;
-    (tWriter->muoJetQ) = jetQ;
-    (tWriter->muoJetCSV) = jetcsv;
-    (tWriter->muoJetDFprob) = jetdfprob;
-    (tWriter->muoJetSize) = jetSize;
+    (tWriter->muoJetPt) = muoJetPt;
+    (tWriter->muoJetPtRel) = muoJetPtRel;
+    (tWriter->muoJetDr) = muoJetDr;
+    (tWriter->muoJetEnergyRatio) = muoJetEnergyRatio;
+    (tWriter->muoJetQ) = muoJetQ;
+    (tWriter->muoJetCSV) = muoJetCSV;
+    (tWriter->muoJetDFprob) = muoJetDFprob;
+    (tWriter->muoJetSize) = muoJetSize;
     (tWriter->muoQCone) = qCone;
 
     (tWriter->muoHowMany) = nMuonsSel;

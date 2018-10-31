@@ -60,7 +60,6 @@ void initTree() {
     setBranch( "muoAncestor", &muoAncestor, "muoAncestor/I", &b_muoAncestor );
     setBranch( "muoSoftMvaValue", &muoSoftMvaValue, "muoSoftMvaValue/F", &b_muoSoftMvaValue );
 
-
     setBranch( "muoDrB", &muoDrB, "muoDrB/F", &b_muoDrB );
     setBranch( "muoDzPV", &muoDzPV, "muoDzPV/F", &b_muoDzPV );
     setBranch( "muoPFIso", &muoPFIso, "muoPFIso/F", &b_muoPFIso );
