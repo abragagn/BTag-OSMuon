@@ -394,6 +394,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     //Jet variables
     int iJet = trkJet->at(itkmu);
     if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
+    TVector3 vMu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
 
     float muoJetPtRel = -1;
     float muoJetDr = -1;
@@ -408,9 +409,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(iJet>=0){
 
         vector <int> jet_pfcs = pfCandFromJet( iJet );
-
-        TVector3 vjet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
-        TVector3 vmu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
+        TVector3 vJet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
 
         muoJetPt = jetPt->at(iJet);
 
@@ -418,8 +417,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         
         muoJetEnergyRatio = muoE->at(iMuon) / jetE->at(iJet);
 
-        vjet -= vmu;
-        muoJetPtRel = muoPt->at( iMuon ) * (vmu.Unit() * vjet.Unit());
+        vJet -= vMu;
+        muoJetPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vJet.Unit());
 
         muoJetSize = jet_pfcs.size();
 
@@ -430,7 +429,47 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
         muoJetDFprob = GetJetProbb(iJet);
 
-    } 
+    }
+
+    //Svt variables
+
+    int osSvt = GetBestSvtFromTrack(itkmu);
+
+    float muoSvtPtRel = -1;
+    float muoSvtDr = -1;
+    float muoSvtEnergyRatio = -1;
+    float muoSvtCSV = -1;
+    float muoSvtDFprob = -1;
+    float muoSvtSize = -1;
+    float muoSvtQ = -1;
+    float muoSvtPt = -1;
+
+    if(osSvt>=0){
+
+        vector <int> tkSvt = tracksFromSV(osSvt);
+        TVector3 vSvt;
+
+        for(auto it:tkSvt){
+            TVector3 v;
+            v.SetXYZ(trkPx->at(it), trkPy->at(it), trkPz->at(it));
+            vSvt += v;
+        }
+
+        muoSvtPt = vSvt.Pt();
+
+        muoSvtDr = deltaR(vSvt.Eta(), vSvt.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
+
+        muoSvtEnergyRatio = -1;
+        muoSvtCSV = -1;
+        muoSvtDFprob = -1;
+
+        vSvt -= vMu;
+        muoSvtPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vSvt.Unit());
+        
+        muoSvtSize = svtNTracks->at(osSvt);
+        muoSvtQ = GetSvtCharge(osSvt, kappa);
+
+    }
 
     bool debugJet = false;
 
@@ -484,25 +523,38 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoJetCSV) = muoJetCSV;
     (tWriter->muoJetDFprob) = muoJetDFprob;
     (tWriter->muoJetSize) = muoJetSize;
-    (tWriter->muoQCone) = qCone;
 
+    (tWriter->muoQCone) = qCone;
     (tWriter->muoHowMany) = nMuonsSel;
+
+    (tWriter->muoSvtPt) = muoSvtPt;
+    (tWriter->muoSvtPtRel) = muoSvtPtRel;
+    (tWriter->muoSvtDr) = muoSvtDr;
+    (tWriter->muoSvtEnergyRatio) = muoSvtEnergyRatio;
+    (tWriter->muoSvtQ) = muoSvtQ;
+    (tWriter->muoSvtCSV) = muoSvtCSV;
+    (tWriter->muoSvtDFprob) = muoSvtDFprob;
+    (tWriter->muoSvtSize) = muoSvtSize;
 
 
     //------------------------------------------------TAG------------------------------------------------
 
     //CHARGE CORRELATION
-    if( muoAncestor >=0 ){
+    if( muoAncestor >=0 )
+    {
 
-        if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) ){
+        if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) )
+        {
             hmass_ssB_osCC->Fill(svtMass->at(iSsB), evtWeight);
             (tWriter->osMuonChargeInfo) = 1 ;
-        }else{
+        }else
+        {
             hmass_ssB_osWC->Fill(svtMass->at(iSsB), evtWeight);
             (tWriter->osMuonChargeInfo) = 0 ;
         }
 
-    }else{
+    }else
+    {
 
         hmass_ssB_osRC->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonChargeInfo) = 2 ;
@@ -567,3 +619,42 @@ void PDAnalyzer::save() {
 
 
 // ======MY FUNCTIONS===============================================================================
+int PDAnalyzer::GetBestSvtFromTrack(int trkIndex )
+{
+    vector <int> svtList = sVtsWithTrack( trkIndex );
+    int index = -1;
+    float bestChi2 = 1e6;
+
+    for(auto it : svtList){
+        if( svtChi2->at(it)/svtNDOF->at(it) > bestChi2 ) continue;
+        index = it;
+        bestChi2 = svtChi2->at(it)/svtNDOF->at(it);
+    }
+
+    return index;
+}
+float PDAnalyzer::GetSvtCharge(int iSvt, float kappa)
+{
+
+    float QSvt = 0;
+    float ptSvt = 0;
+
+    vector <int> list = tracksFromSV(iSvt);
+
+    for(int it:list){
+
+       float pt = trkPt->at(it);
+
+       if(pt<0.2) continue;
+       if(abs(trkEta->at(it))>2.5) continue;
+
+       QSvt += trkCharge->at(it) * pow(pt, kappa);
+       ptSvt += pow(pt, kappa);
+
+    }
+
+    QSvt /= ptSvt;
+
+    return QSvt; 
+
+}

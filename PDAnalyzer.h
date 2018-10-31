@@ -88,6 +88,9 @@ class PDAnalyzer: public virtual PDAnalyzerUtil
     TH1D *hTest;
     TH1D *hTest2;
 
+    //FUNCTIONS
+    int GetBestSvtFromTrack(int trkIndex );
+    float GetSvtCharge(int iSvt, float kappa);
 // additional features: second ntuple
     PDSecondNtupleWriter* tWriter;
 
