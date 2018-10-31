@@ -41,8 +41,8 @@ PDAnalyzer::PDAnalyzer() {
 
     setUserParameter( "outputFile", "ntu.root" );
 
-    setUserParameter( "muonIdWpBarrel", "0.20" ); 
-    setUserParameter( "muonIdWpEndcap", "0.50" ); 
+    setUserParameter( "muonIdWpBarrel", "0.00" ); 
+    setUserParameter( "muonIdWpEndcap", "0.00" ); 
 
     setUserParameter( "muoDzCut", "1." ); 
     setUserParameter( "muoPFIsoCut", "5" ); 
@@ -94,7 +94,7 @@ void PDAnalyzer::beginJob() {
 
     setupReader( mvaMethod );
 
-    if(process=="BsJPsiPhi") SetBsMassRange(5.15, 5.50);
+    if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
 
     return;
@@ -146,7 +146,7 @@ void PDAnalyzer::book() {
 
 
 void PDAnalyzer::reset() {
-// automatic reset
+
     autoReset();
     return;
 }
@@ -162,7 +162,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
              << "evt: " << eventNumber << endl;
     }
     else {
-
         if ( (!(event_tot%10) && event_tot<100 ) || 
         (!(event_tot %100) && event_tot<1000 ) || 
         (!(event_tot %1000)&& event_tot<10000 ) || 
