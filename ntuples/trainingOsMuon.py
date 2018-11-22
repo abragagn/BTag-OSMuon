@@ -47,7 +47,7 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
-DNNFLAG= True
+DNNFLAG= False
 BDTFLAG = True
 
 year = sys.argv[1]
@@ -89,17 +89,19 @@ varList = [
     ,('muoDxy', 'F')
     ,('muoDz', 'F')
     ,('muoSoftMvaValue', 'F')
-    ,('muoDR_B', 'F')
+    ,('muoDrB', 'F')
     ,('muoPFIso', 'F')
     ,('muoJetPt', 'F')
-    ,('muoPtRel', 'F')
-    ,('muoDrJet', 'F')
-    ,('muoEnergyRatio', 'F')
+    ,('muoJetPtRel', 'F')
+    ,('muoJetDr', 'F')
+    ,('muoJetEnergyRatio', 'F')
     ,('muoJetCSV', 'F')
     ,('muoJetDFprob', 'F')
     ,('muoJetSize', 'I')
     ,('muoQCone', 'F')
     ]
+
+nVars = 0
 
 for var in varList:
     if year == '2016' and var[0] == 'muoJetDFprob':
