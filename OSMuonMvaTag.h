@@ -20,20 +20,29 @@ public:
     OSMuonMvaTag();
     ~OSMuonMvaTag();
 
-    float getEventMistagProb();
-    int getEventTag();
+    int     getOsMuon(int iB);
+    int     getOsMuonTag(int iB, int iMuon);
+    float   getOsMuonMvaValue();
+    float   getOsMuonMistagProb();
 
 private:
     TMVA::Reader reader_;
     TString weightsFile_;
+    TString methodName_;
+    int ssIndex_;
+    int osMuonIndex_;
+    int osMuonTrackIndex_;
 
-    void OSMuonMvaTag::setupReader(TString);
-    TString OSMuonMvaTag::methodNameFromWeightName();
+    void    setupReader(TString weight);
+    TString methodNameFromWeightName();
+    void    computeVariables();
+    
+    
 
     //MVA Variables
 
     float muoPt_;
-    float muoEta_;
+    float absmuoEta_;
     float muoDxy_;
     float muoDz_;
     float muoSoftMvaValue_;
@@ -54,7 +63,9 @@ private:
     float muoConePtRel_;
     float muoConeDr_;
     float muoConeEnergyRatio_;
-    int   muoJetSize_;
+    int   muoConeSize_;
+
+    float muoCharge_;
 
     float DUMMY_;
 
