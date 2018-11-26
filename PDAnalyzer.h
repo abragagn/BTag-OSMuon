@@ -19,10 +19,11 @@ class PDSecondNtupleWriter;
 // to skim the N-tuple replace the the following line
 // with the "commented" ones
 class PDAnalyzer: public virtual PDAnalyzerUtil
-,                    public virtual PDGenHandler
-,                    public virtual PDMuonVar
-,                    public virtual PDSoftMuonMvaEstimator
-,                    public virtual AlbertoUtil
+,                 public virtual PDGenHandler
+,                 public virtual PDMuonVar
+,                 public virtual PDSoftMuonMvaEstimator
+,                 public virtual AlbertoUtil
+,                 public virtual OSMuonMvaTag
 
 // additional features
 //,                              public virtual DataSetFilter    // dataset filter

@@ -18,6 +18,7 @@
 #include "PDSecondNtupleWriter.h"
 #include "PDMuonVar.cc"
 #include "PDSoftMuonMvaEstimator.cc"
+#include "OSMuonMvaTag.cc"
 #include "AlbertoUtil.cc"
 
 using namespace std;
