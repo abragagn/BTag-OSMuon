@@ -2,7 +2,7 @@
 #include "AlbertoUtil.h"
 
 OSMuonMvaTag::OSMuonMvaTag():
-                reader_("!Color:Silent")
+                osMuonTagReader_("!Color:Silent")
 ,               ssIndex_(-1)
 ,               osMuonIndex_(-1)
 ,               osMuonTrackIndex_(-1)
@@ -15,15 +15,17 @@ OSMuonMvaTag::OSMuonMvaTag():
 OSMuonMvaTag::~OSMuonMvaTag() {}
 
 // =====================================================================================
-void OSMuonMvaTag::setWeights(TString weightsFile = "/lustre/cmswork/abragagn/weights/TMVAClassification_BDTOsMuon2016.weights.xml")
+void OSMuonMvaTag::setWeights(TString methodName, TString path)
 {    
-    TString prefix = "TMVAClassification_";
-    int start = weightsFile.Index(prefix) + prefix.Length();
-    int length = weightsFile.Index(".weights") - start;
-    TString name( weightsFile(start, length) );
+    TString year = "";
+    if(methodName.Contains("2016")) year = "2016";
+    if(methodName.Contains("2017")) year = "2017";
+    if(methodName.Contains("2018")) year = "2018";
+
+    TString weightsFile = path + year + "/TMVAClassification_" + methodName  + ".weights.xml";
 
     weightsFile_ = weightsFile;
-    methodName_ = name;
+    methodName_ = methodName;
 }
 
 void OSMuonMvaTag::setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoCut)
@@ -34,39 +36,39 @@ void OSMuonMvaTag::setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoC
     PFIsoCut_ = PFIsoCut;
 }
 
-void OSMuonMvaTag::inizializeOSMuonMvaReader(TString weightsFile = "/lustre/cmswork/abragagn/weights/TMVAClassification_BDTOsMuon2016.weights.xml")
+void OSMuonMvaTag::inizializeOSMuonMvaReader(TString methodName, TString path = "/lustre/cmswork/abragagn/weights/" )
 {
 
     TMVA::PyMethodBase::PyInitialize();
-    setWeights(weightsFile);
+    setWeights(methodName, path);
 
-    reader_.AddVariable( "muoPt", &muoPt_);
-    reader_.AddVariable( "muoEta", &absmuoEta_);
-    reader_.AddVariable( "muoDxy", &muoDxy_);
-    reader_.AddVariable( "muoDz", &muoDz_);
-    reader_.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
-    reader_.AddVariable( "muoDrB", &muoDrB_);
-    reader_.AddVariable( "muoPFIso", &muoPFIso_);
+    osMuonTagReader_.AddVariable( "muoPt", &muoPt_);
+    osMuonTagReader_.AddVariable( "muoEta", &absmuoEta_);
+    osMuonTagReader_.AddVariable( "muoDxy", &muoDxy_);
+    osMuonTagReader_.AddVariable( "muoDz", &muoDz_);
+    osMuonTagReader_.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
+    osMuonTagReader_.AddVariable( "muoDrB", &muoDrB_);
+    osMuonTagReader_.AddVariable( "muoPFIso", &muoPFIso_);
 
     if(weightsFile_.Contains("Jet")){
-        reader_.AddVariable( "muoJetPt", &muoJetPt_);
-        reader_.AddVariable( "muoJetPtRel", &muoJetPtRel_);
-        reader_.AddVariable( "muoJetDr", &muoJetDr_);
-        reader_.AddVariable( "muoJetEnergyRatio", &muoJetEnergyRatio_);
-        reader_.AddVariable( "muoJetCSV", &muoJetCSV_);
-        if(!weightsFile_.Contains("2016")) reader_.AddVariable( "muoJetDFprob", &muoJetDFprob_);
+        osMuonTagReader_.AddVariable( "muoJetPt", &muoJetPt_);
+        osMuonTagReader_.AddVariable( "muoJetPtRel", &muoJetPtRel_);
+        osMuonTagReader_.AddVariable( "muoJetDr", &muoJetDr_);
+        osMuonTagReader_.AddVariable( "muoJetEnergyRatio", &muoJetEnergyRatio_);
+        osMuonTagReader_.AddVariable( "muoJetCSV", &muoJetCSV_);
+        if(!weightsFile_.Contains("2016")) osMuonTagReader_.AddVariable( "muoJetDFprob", &muoJetDFprob_);
     }
     if(weightsFile_.Contains("Cone")){
-        reader_.AddVariable( "muoConePt", &muoConePt_);
-        reader_.AddVariable( "muoConePtRel", &muoConePtRel_);
-        reader_.AddVariable( "muoConeDr", &muoConeDr_);
-        reader_.AddVariable( "muoConeEnergyRatio", &muoConeEnergyRatio_);
-        reader_.AddVariable( "muoConeSize", &muoConeSize_);
+        osMuonTagReader_.AddVariable( "muoConePt", &muoConePt_);
+        osMuonTagReader_.AddVariable( "muoConePtRel", &muoConePtRel_);
+        osMuonTagReader_.AddVariable( "muoConeDr", &muoConeDr_);
+        osMuonTagReader_.AddVariable( "muoConeEnergyRatio", &muoConeEnergyRatio_);
+        osMuonTagReader_.AddVariable( "muoConeSize", &muoConeSize_);
     }
 
-    reader_.AddVariable( "muoQCone", &muoQCone_);
+    osMuonTagReader_.AddVariable( "muoQCone", &muoQCone_);
 
-    reader_.BookMVA( methodName_, weightsFile_ );
+    osMuonTagReader_.BookMVA( methodName_, weightsFile_ );
 
 }
 
@@ -222,7 +224,7 @@ int OSMuonMvaTag::getOsMuonTag(int iB = -1)
 float OSMuonMvaTag::getOsMuonMvaValue()
 {
     computeVariables();
-    return reader_.EvaluateMVA(methodName_);
+    return osMuonTagReader_.EvaluateMVA(methodName_);
 }
 
 /*float OSMuonMvaTag::getOsMuonMistagProb()

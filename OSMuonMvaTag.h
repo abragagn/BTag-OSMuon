@@ -30,16 +30,17 @@ public:
 
     void    setSsForTag(int iB) { ssIndex_ = iB; }
     void    setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoCut);
-    void    inizializeOSMuonMvaReader(TString weightsFile);
+    void    inizializeOSMuonMvaReader(TString weightsFile, TString path);
 
 private:    
     TString methodNameFromWeightName();
     void    computeVariables();
-    void    setWeights(TString weightsFile);
+    void    setWeights(TString methodName, TString path);
 
-    TMVA::Reader reader_;
+    TMVA::Reader osMuonTagReader_;
     TString weightsFile_;
     TString methodName_;
+
     int ssIndex_;
     int osMuonIndex_;
     int osMuonTrackIndex_;
