@@ -1,78 +1,99 @@
 #include "PDSoftMuonMvaEstimator.h"
 #include "AlbertoUtil.h"
 
-OSMuonMvaTag::OSMuonMvaTag(TString weightsFile = "/lustre/cmswork/abragagn/weights/TMVAClassification_BDTOsMuon2016.weights.xml"):
-    reader_("!Color:Silent"),
-    ssIndex_(-1),
-    osMuonIndex_(-1),
-    osMuonTrackIndex_(-1)
-{
-    TMVA::PyMethodBase::PyInitialize();
-    weightsFile_ = weightsFile,
-    methodName_ = methodNameFromWeightName();
-    setupReader();
-}
+OSMuonMvaTag::OSMuonMvaTag():
+                reader_("!Color:Silent")
+,               ssIndex_(-1)
+,               osMuonIndex_(-1)
+,               osMuonTrackIndex_(-1)
+,               wpB_(0.)
+,               wpE_(0.)
+,               dzCut_(1.)
+,               PFIsoCut_(5.)
+{}
 
 OSMuonMvaTag::~OSMuonMvaTag() {}
 
 // =====================================================================================
-void OSMuonMvaTag::setupReader()
+void OSMuonMvaTag::setWeights(TString weightsFile = "/lustre/cmswork/abragagn/weights/TMVAClassification_BDTOsMuon2016.weights.xml")
+{    
+    TString prefix = "TMVAClassification_";
+    int start = weightsFile.Index(prefix) + prefix.Length();
+    int length = weightsFile.Index(".weights") - start;
+    TString name( weightsFile(start, length) );
+
+    weightsFile_ = weightsFile;
+    methodName_ = name;
+}
+
+void OSMuonMvaTag::setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoCut)
+{
+    wpB_ = wpB;
+    wpE_ = wpE;
+    dzCut_ = dzCut;
+    PFIsoCut_ = PFIsoCut;
+}
+
+void OSMuonMvaTag::inizializeOSMuonMvaReader(TString weightsFile = "/lustre/cmswork/abragagn/weights/TMVAClassification_BDTOsMuon2016.weights.xml")
 {
 
-    reader_.AddVariable( "muoPt_", &muoPt_);
-    reader_.AddVariable( "muoEta_", &absmuoEta_);
-    reader_.AddVariable( "muoDxy_", &muoDxy_);
-    reader_.AddVariable( "muoDz_", &muoDz_);
-    reader_.AddVariable( "muoSoftMvaValue_", &muoSoftMvaValue_);
-    reader_.AddVariable( "muoDrB_", &muoDrB_);
-    reader_.AddVariable( "muoPFIso_", &muoPFIso_);
+    TMVA::PyMethodBase::PyInitialize();
+    setWeights(weightsFile);
+
+    reader_.AddVariable( "muoPt", &muoPt_);
+    reader_.AddVariable( "muoEta", &absmuoEta_);
+    reader_.AddVariable( "muoDxy", &muoDxy_);
+    reader_.AddVariable( "muoDz", &muoDz_);
+    reader_.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
+    reader_.AddVariable( "muoDrB", &muoDrB_);
+    reader_.AddVariable( "muoPFIso", &muoPFIso_);
 
     if(weightsFile_.Contains("Jet")){
-        reader_.AddVariable( "muoJetPt_", &muoJetPt_);
-        reader_.AddVariable( "muoJetPtRel_", &muoJetPtRel_);
-        reader_.AddVariable( "muoJetDr_", &muoJetDr_);
-        reader_.AddVariable( "muoJetEnergyRatio_", &muoJetEnergyRatio_);
-        reader_.AddVariable( "muoJetCSV_", &muoJetCSV_);
-        if(!weightsFile_.Contains("2016")) reader_.AddVariable( "muoJetDFprob_", &muoJetDFprob_);
+        reader_.AddVariable( "muoJetPt", &muoJetPt_);
+        reader_.AddVariable( "muoJetPtRel", &muoJetPtRel_);
+        reader_.AddVariable( "muoJetDr", &muoJetDr_);
+        reader_.AddVariable( "muoJetEnergyRatio", &muoJetEnergyRatio_);
+        reader_.AddVariable( "muoJetCSV", &muoJetCSV_);
+        if(!weightsFile_.Contains("2016")) reader_.AddVariable( "muoJetDFprob", &muoJetDFprob_);
     }
-
     if(weightsFile_.Contains("Cone")){
-        reader_.AddVariable( "muoConePt_", &muoConePt_);
-        reader_.AddVariable( "muoConePtRel_", &muoConePtRel_);
-        reader_.AddVariable( "muoConeDr_", &muoConeDr_);
-        reader_.AddVariable( "muoConeEnergyRatio_", &mumuoConeEnergyRatio_oConeDr_);
-        reader_.AddVariable( "muoConeSize_", &muoConeSize_);
+        reader_.AddVariable( "muoConePt", &muoConePt_);
+        reader_.AddVariable( "muoConePtRel", &muoConePtRel_);
+        reader_.AddVariable( "muoConeDr", &muoConeDr_);
+        reader_.AddVariable( "muoConeEnergyRatio", &muoConeEnergyRatio_);
+        reader_.AddVariable( "muoConeSize", &muoConeSize_);
     }
 
-    reader_.AddVariable( "muoQCone_", &muoQCone_);
+    reader_.AddVariable( "muoQCone", &muoQCone_);
 
     reader_.BookMVA( methodName_, weightsFile_ );
-
-    return;
 
 }
 
 TString OSMuonMvaTag::methodNameFromWeightName()
 {
     TString prefix = "TMVAClassification_";
-    int start = weightsName_.Index(prefix) + prefix.Length();
-    int length = weightsName_.Index(".weights") - start;
-    TString name( weightsName_(start, length) );
+    int start = weightsFile_.Index(prefix) + prefix.Length();
+    int length = weightsFile_.Index(".weights") - start;
+    TString name( weightsFile_(start, length) );
     return name;
 }
 
 int OSMuonMvaTag::getOsMuon(int iB = -999)
 {
+
     if(iB == -999) iB = ssIndex_;
 
     vector <int> tkSsB = tracksFromSV(iB);
+    TLorentzVector tB = GetTLorentzVecFromJpsiX(iB);
 
     int bestMuIndex = -1;
-    float bestMuPt = minPtMuon;
+    float bestMuPt = 2.;
+    int itkmu = -1;
 
     for(int iMuon = 0; iMuon < nMuons; ++iMuon ){
 
-        int itkmu = muonTrack( iMuon, PDEnumString::muInner );
+        itkmu = muonTrack( iMuon, PDEnumString::muInner );
         if(itkmu<0) continue;
 
         if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
@@ -80,11 +101,10 @@ int OSMuonMvaTag::getOsMuon(int iB = -999)
         if(muoPt->at( iMuon ) < 2.) continue;
         if(abs(muoEta->at( iMuon )) > 2.4) continue;
        
-        if(!isMvaMuon(iMuon, muonIdWpBarrel, muonIdWpEndcap)) continue;
+        if(!isMvaMuon(iMuon, wpB_, wpE_)) continue;
 
-        if(abs(dZ(itkmu, iSsPV)) > muoDzCut) continue;
-        if(GetMuoPFiso(iMuon) > muoPFIsoCut)  continue;
-
+        if(abs(dZ(itkmu, GetBestPV(iB, tB))) > dzCut_) continue;
+        if(GetMuoPFiso(iMuon) > PFIsoCut_)  continue;
 
         if(muoPt->at( iMuon ) > bestMuPt){
             bestMuPt = muoPt->at( iMuon );
@@ -97,20 +117,23 @@ int OSMuonMvaTag::getOsMuon(int iB = -999)
     return bestMuIndex;
 
 }
+
 void OSMuonMvaTag::computeVariables()
 {
+
     int iB = ssIndex_;
     int iMuon = osMuonIndex_;
 
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
-    TLorentzVector tB = GetTLorentzVecFromJpsiX(iSsB);
+    TLorentzVector tB = GetTLorentzVecFromJpsiX(iB);
+    vector <int> tkSsB = tracksFromSV(iB);
 
     DUMMY_ = -1;
 
-    muoPt_ muoPt->at(iMuon);
-    absMuoEta_ abs(muoEta->at(iMuon));
-    muoDxy_= GetSignedDxy(iMuon, iSsPV);
-    muoDz_= dZ(itkmu, iSsPV);
+    muoPt_ = muoPt->at(iMuon);
+    absmuoEta_ = abs(muoEta->at(iMuon));
+    muoDxy_= GetSignedDxy(iMuon, iB);
+    muoDz_= dZ(itkmu, iB);
     muoSoftMvaValue_= computeMva(iMuon);
     muoDrB_= deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     muoPFIso_= GetMuoPFiso(iMuon);
@@ -148,7 +171,6 @@ void OSMuonMvaTag::computeVariables()
     muoJetDFprob_ = -1;
     muoJetSize_ = -1;
 
-
     if(iJet>=0){
         vector <int> jet_pfcs = pfCandFromJet( iJet );
         TVector3 vJet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
@@ -161,8 +183,6 @@ void OSMuonMvaTag::computeVariables()
         muoJetCSV_ = jetCSV->at(iJet);
         muoJetDFprob_ = GetJetProbb(iJet);
     }
-
-
 
     muoConePt_ = -1;
     muoConePtRel_ = -1;
@@ -179,7 +199,7 @@ void OSMuonMvaTag::computeVariables()
         TLorentzVector a;
         a.SetPxPyPzE(pfcPx->at(i), pfcPy->at(i), pfcPz->at(i), pfcE->at(i));
         tCone += a;
-        ++muoConeSize;
+        ++muoConeSize_;
     }
 
     muoConePt_ = tCone.Pt();
@@ -188,19 +208,16 @@ void OSMuonMvaTag::computeVariables()
     tCone -= tMu;
     muoConePtRel_ = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
 
-    return;
 }
 
-int OSMuonMvaTag::getOsMuonTag(int iB)
+int OSMuonMvaTag::getOsMuonTag(int iB = -1)
 {
-    ssIndex_ = iB;
-    getOsMuon();
+    if(ssIndex_ < 0) ssIndex_ = iB;
+    getOsMuon(ssIndex_);
     if(osMuonIndex_ < 0) return 0;
 
-    return -1*trkCharge->at(osMuonTrackIndex_);
-    
+    return -1*trkCharge->at(osMuonTrackIndex_); 
 }
-
 
 float OSMuonMvaTag::getOsMuonMvaValue()
 {
@@ -208,7 +225,8 @@ float OSMuonMvaTag::getOsMuonMvaValue()
     return reader_.EvaluateMVA(methodName_);
 }
 
-float OSMuonMvaTag::getOsMuonMistagProb()
+/*float OSMuonMvaTag::getOsMuonMistagProb()
 {
     //todo
 }
+*/
