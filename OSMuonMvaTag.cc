@@ -91,11 +91,11 @@ int OSMuonMvaTag::getOsMuon(int iB = -999)
 
     int bestMuIndex = -1;
     float bestMuPt = 2.;
-    int itkmu = -1;
+    int bestMuTrack = -1;
 
     for(int iMuon = 0; iMuon < nMuons; ++iMuon ){
 
-        itkmu = muonTrack( iMuon, PDEnumString::muInner );
+        int itkmu = muonTrack( iMuon, PDEnumString::muInner );
         if(itkmu<0) continue;
 
         if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
@@ -111,11 +111,12 @@ int OSMuonMvaTag::getOsMuon(int iB = -999)
         if(muoPt->at( iMuon ) > bestMuPt){
             bestMuPt = muoPt->at( iMuon );
             bestMuIndex = iMuon;
+            bestMuTrack = itkmu;
         }
     }
 
     osMuonIndex_ = bestMuIndex;
-    osMuonTrackIndex_ = itkmu;
+    osMuonTrackIndex_ = bestMuTrack;
     return bestMuIndex;
 
 }
