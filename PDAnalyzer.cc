@@ -90,12 +90,12 @@ void PDAnalyzer::beginJob() {
 
     getUserParameter( "ptCut", ptCut ); //needed for paolo's code for unknow reasons
 
-/// additional features
+//  additional features
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
     inizializeMuonMvaReader( muonMvaMethod );
-    inizializeMuonMvaReader( osMuonTagMvaMethod );
+    //inizializeMuonMvaReader( osMuonTagMvaMethod );
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
@@ -275,6 +275,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     int iSsPV = GetBestPV(iSsB, tB);
     if(iSsPV < 0) return false;
 
+    setSsForTag(iSsB);
+
     //FILLING SS
     (tWriter->ssbPt) = tB.Pt();
     (tWriter->ssbEta) = tB.Eta();
@@ -305,53 +307,35 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     
 //-----------------------------------------OPPOSITE SIDE-----------------------------------------
 
-//-----------------------------------------SELECTION-----------------------------------------
+    int bestMuIndex = getOsMuon();
+    int tagDecision = getOsMuonTag();
 
-    int bestMuIndex=-1;
-    float bestMuPt = minPtMuon;
-    int nMuonsSel = 0;
-
-    for(int iMuon = 0; iMuon < nMuons; ++iMuon ){
-
-        int itkmu = muonTrack( iMuon, PDEnumString::muInner );
-        if(itkmu<0) continue;
-
-        if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
-
-        if(muoPt->at( iMuon )<minPtMuon) continue;
-        if(abs(muoEta->at( iMuon ))>maxEtaMuon) continue;
-       
-        if(!isMvaMuon(iMuon, muonIdWpBarrel, muonIdWpEndcap)) continue;
-
-        if(abs(dZ(itkmu, iSsPV)) > muoDzCut) continue;
-        if(GetMuoPFiso(iMuon) > muoPFIsoCut)  continue;
-
-        ++nMuonsSel;
-
-        if(muoPt->at( iMuon ) > bestMuPt){
-            bestMuPt = muoPt->at( iMuon );
-            bestMuIndex = iMuon;
-        }
-    }
-
-
-//-----------------------------------------TAGGING VARIABLES-----------------------------------------
-
-    if( bestMuIndex < 0 ){
+    if( tagDecision == 0 ){
 
         (tWriter->osMuon) = 0 ;
         (tWriter->osMuonTag) = -1 ;
         (tWriter->osMuonChargeInfo) = -1;
         (tWriter->evtNumber)= event_tot ;
         tWriter->fill();
-
         return true;
     }
-
 
     (tWriter->osMuon) = 1;
     hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
 
+    if( TMath::Sign(1, ssBLund) == tagDecision ){ 
+        hmass_ssB_osRT->Fill(svtMass->at(iSsB), evtWeight);
+        (tWriter->osMuonTag) = 1 ;
+    }
+
+    if( TMath::Sign(1, ssBLund) != tagDecision ){
+        hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
+        (tWriter->osMuonTag) = 0 ;
+    }
+
+    
+
+    //COMPLEX TAGGING VARIABLES
     //INDICES
     int iMuon = bestMuIndex;
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
@@ -365,9 +349,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         muoLund = genId->at(genMuIndex);
         muoAncestor = GetAncestor( genMuIndex, &ListB ); 
     }
-
-
-    //COMPLEX TAGGING VARIABLES
 
     //Muon Cone Charge
     float kappa = 1;
@@ -490,6 +471,21 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     muoConeQ = qCone;
 
 
+    //HOW MANY MUONS
+    int nMuonsSel = 0;
+    for(int iMuon = 0; iMuon < nMuons; ++iMuon ){
+        int itkmu = muonTrack( iMuon, PDEnumString::muInner );
+        if(itkmu<0) continue;
+        if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
+        if(muoPt->at( iMuon )<minPtMuon) continue;
+        if(abs(muoEta->at( iMuon ))>maxEtaMuon) continue;
+        if(!isMvaMuon(iMuon, muonIdWpBarrel, muonIdWpEndcap)) continue;
+        if(abs(dZ(itkmu, iSsPV)) > muoDzCut) continue;
+        if(GetMuoPFiso(iMuon) > muoPFIsoCut)  continue;
+        ++nMuonsSel;
+    }
+
+
     bool debugJet = false;
 
     if(debugJet && muoAncestor>=0 && iJet>=0){
@@ -546,7 +542,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoQCone) = qCone;
     (tWriter->muoHowMany) = nMuonsSel;
 
-    (tWriter->muoSvtPt) = muoSvtPt;
+    (tWriter->muoSvtPt)  = muoSvtPt;
     (tWriter->muoSvtPtRel) = muoSvtPtRel;
     (tWriter->muoSvtDr) = muoSvtDr;
     (tWriter->muoSvtEnergyRatio) = muoSvtEnergyRatio;
@@ -566,7 +562,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
     //------------------------------------------------TAG------------------------------------------------
 
-    //CHARGE CORRELATION
+    //CHARGE CORRELATION 
     if( muoAncestor >=0 )
     {
 
@@ -587,16 +583,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->osMuonChargeInfo) = 2 ;
     }
 
-    //TAG
-    if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) ){ 
-        hmass_ssB_osRT->Fill(svtMass->at(iSsB), evtWeight);
-        (tWriter->osMuonTag) = 1 ;
-    }
-
-    if( TMath::Sign(1, ssBLund) != -1*trkCharge->at(itkmu) ){
-        hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
-        (tWriter->osMuonTag) = 0 ;
-    }
 
     (tWriter->evtNumber)=( event_tot );
     tWriter->fill();
