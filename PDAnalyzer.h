@@ -8,6 +8,7 @@
 #include "TopDecayClassifier.h"
 #include "PDSoftMuonMvaEstimator.h"
 #include "AlbertoUtil.h"
+#include "OSMuonMvaTag.h"
 
 // to skim the N-tuple "uncomment" the following line
 //#include "NtuTool/Common/interface/TreeFilter.h"
@@ -75,7 +76,8 @@ class PDAnalyzer: public virtual PDAnalyzerUtil
     int nselMu;
 
     TString process;
-    TString mvaMethod;
+    TString muonMvaMethod;
+    TString osMuonTagMvaMethod;
 
     // HISTOGRAMS
 

@@ -18,8 +18,8 @@
 #include "PDSecondNtupleWriter.h"
 #include "PDMuonVar.cc"
 #include "PDSoftMuonMvaEstimator.cc"
-#include "OSMuonMvaTag.cc"
 #include "AlbertoUtil.cc"
+#include "OSMuonMvaTag.cc"
 
 using namespace std;
 
@@ -48,7 +48,7 @@ PDAnalyzer::PDAnalyzer() {
     setUserParameter( "muoDzCut", "1." ); 
     setUserParameter( "muoPFIsoCut", "5" ); 
 
-    setUserParameter( "mvaMethod", "DNNGlobal2016woIPwIso" ); 
+    setUserParameter( "muonMvaMethod", "DNNGlobal2016woIPwIso" ); 
 
     setUserParameter( "ptCut", "40.0" ); //needed for paolo's code for unknow reasons
 
@@ -85,7 +85,8 @@ void PDAnalyzer::beginJob() {
     getUserParameter( "muoDzCut", muoDzCut ); 
     getUserParameter( "muoPFIsoCut", muoPFIsoCut ); 
 
-    getUserParameter( "mvaMethod", mvaMethod );
+    getUserParameter( "muonMvaMethod", muonMvaMethod );
+    getUserParameter( "osMuonTagMvaMethod", osMuonTagMvaMethod );
 
     getUserParameter( "ptCut", ptCut ); //needed for paolo's code for unknow reasons
 
@@ -93,7 +94,8 @@ void PDAnalyzer::beginJob() {
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
-    setupReader( mvaMethod );
+    inizializeMuonMvaReader( muonMvaMethod );
+    inizializeMuonMvaReader( osMuonTagMvaMethod );
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
