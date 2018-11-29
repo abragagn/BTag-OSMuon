@@ -36,7 +36,9 @@ void OSMuonMvaTag::setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoC
     PFIsoCut_ = PFIsoCut;
 }
 
-void OSMuonMvaTag::inizializeOSMuonMvaReader(TString methodName, TString path = "/lustre/cmswork/abragagn/weights/" )
+void OSMuonMvaTag::inizializeOSMuonMvaTagReader(
+    TString methodName, 
+    TString path = "/lustre/cmswork/abragagn/weights/OsMuonTag/" )
 {
 
     TMVA::PyMethodBase::PyInitialize();
@@ -57,6 +59,7 @@ void OSMuonMvaTag::inizializeOSMuonMvaReader(TString methodName, TString path = 
         osMuonTagReader_.AddVariable( "muoJetEnergyRatio", &muoJetEnergyRatio_);
         osMuonTagReader_.AddVariable( "muoJetCSV", &muoJetCSV_);
         if(!weightsFile_.Contains("2016")) osMuonTagReader_.AddVariable( "muoJetDFprob", &muoJetDFprob_);
+        osMuonTagReader_.AddVariable( "muoJetSize", &muoJetSize_);
     }
     if(weightsFile_.Contains("Cone")){
         osMuonTagReader_.AddVariable( "muoConePt", &muoConePt_);

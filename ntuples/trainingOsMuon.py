@@ -47,7 +47,7 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
-DNNFLAG= False
+DNNFLAG= True
 BDTFLAG = True
 
 year = sys.argv[1]
@@ -72,7 +72,9 @@ cutBkg = cut + '&&osMuonTag==0'
 
 # Prepare factory
 
-name = 'OsMuon' + year
+nTest = sys.argv[2]
+
+name = 'OsMuon' + year + 'test' + nTest
 
 outputName = 'TMVA' + name + '.root'
 
@@ -83,7 +85,7 @@ factory = TMVA.Factory('TMVAClassification', output,
 
 dataloader = TMVA.DataLoader('dataset')
 
-varList = [
+varListTest1 = [
     ('muoPt', 'F')
     ,('muoEta', 'F')
     ,('muoDxy', 'F')
@@ -100,6 +102,73 @@ varList = [
     ,('muoJetSize', 'I')
     ,('muoQCone', 'F')
     ]
+
+varListTest2 = [
+    ('muoPt', 'F')
+    ,('muoEta', 'F')
+    ,('muoDxy', 'F')
+    ,('muoDz', 'F')
+    ,('muoSoftMvaValue', 'F')
+    ,('muoDrB', 'F')
+    ,('muoPFIso', 'F')
+    ,('muoConePt', 'F')
+    ,('muoConePtRel', 'F')
+    ,('muoConeDr', 'F')
+    ,('muoConeEnergyRatio', 'F')
+    ,('muoConeSize', 'I')
+    ,('muoQCone', 'F')
+    ]
+
+
+varListTest3 = [
+    ('muoPt', 'F')
+    ,('muoEta', 'F')
+    ,('muoDxy', 'F')
+    ,('muoDz', 'F')
+    ,('muoSoftMvaValue', 'F')
+    ,('muoDrB', 'F')
+    ,('muoPFIso', 'F')
+    ,('muoJetPt', 'F')
+    ,('muoJetPtRel', 'F')
+    ,('muoJetDr', 'F')
+    ,('muoJetEnergyRatio', 'F')
+    ,('muoJetSize', 'I')
+    ,('muoQCone', 'F')
+    ]
+
+varListTest4 = [
+    ('muoPt', 'F')
+    ,('muoEta', 'F')
+    ,('muoDxy', 'F')
+    ,('muoDz', 'F')
+    ,('muoSoftMvaValue', 'F')
+    ,('muoDrB', 'F')
+    ,('muoPFIso', 'F')
+    ,('muoConePt', 'F')
+    ,('muoConePtRel', 'F')
+    ,('muoConeDr', 'F')
+    ,('muoConeEnergyRatio', 'F')
+    ,('muoJetCSV', 'F')
+    ,('muoJetDFprob', 'F')
+    ,('muoConeSize', 'I')
+    ,('muoQCone', 'F')
+    ]
+
+
+if nTest == '1':
+    varList = varListTest1
+
+if nTest == '2':
+    varList = varListTest2
+
+if nTest == '3':
+    varList = varListTest3
+
+if nTest == '4':
+    varList = varListTest4
+
+if nTest == '5':
+    varList = varListTest1
 
 nVars = 0
 
@@ -120,7 +189,10 @@ dataloader.PrepareTrainingAndTestTree(TCut(cutSgn), TCut(cutBkg), dataloaderOpt)
 
 # Define Keras Model
 if DNNFLAG:
-    modelName = getKerasModel(nVars, 'model' + year + '.h5')
+    if nTest == '5':
+        modelName = getKerasModel(nVars, 'model' + year + '.h5')
+    else:
+        modelName = getKerasModel(nVars, 'model' + year + '.h5', 50, 5, dropValue = 0.5)
 
     # Book methods
     dnnOptions = '!H:!V:NumEpochs=1000:TriesEarlyStopping=50:BatchSize=32:FilenameModel='

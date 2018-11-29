@@ -49,6 +49,7 @@ PDAnalyzer::PDAnalyzer() {
     setUserParameter( "muoPFIsoCut", "5" ); 
 
     setUserParameter( "muonMvaMethod", "DNNGlobal2016woIPwIso" ); 
+    setUserParameter( "osMuonTagMvaMethod", "BDTOsMuon2016Jet" ); 
 
     setUserParameter( "ptCut", "40.0" ); //needed for paolo's code for unknow reasons
 
@@ -95,7 +96,7 @@ void PDAnalyzer::beginJob() {
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
     inizializeMuonMvaReader( muonMvaMethod );
-    //inizializeMuonMvaReader( osMuonTagMvaMethod );
+    inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
@@ -311,7 +312,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     int tagDecision = getOsMuonTag();
 
     if( tagDecision == 0 ){
-
         (tWriter->osMuon) = 0 ;
         (tWriter->osMuonTag) = -1 ;
         (tWriter->osMuonChargeInfo) = -1;
@@ -332,8 +332,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 0 ;
     }
-
-    
 
     //COMPLEX TAGGING VARIABLES
     //INDICES
@@ -563,26 +561,18 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     //------------------------------------------------TAG------------------------------------------------
 
     //CHARGE CORRELATION 
-    if( muoAncestor >=0 )
-    {
-
-        if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) )
-        {
+    if( muoAncestor >=0 ){
+        if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) ){
             hmass_ssB_osCC->Fill(svtMass->at(iSsB), evtWeight);
             (tWriter->osMuonChargeInfo) = 1 ;
-        }else
-        {
+        }else{
             hmass_ssB_osWC->Fill(svtMass->at(iSsB), evtWeight);
             (tWriter->osMuonChargeInfo) = 0 ;
         }
-
-    }else
-    {
-
+    }else{
         hmass_ssB_osRC->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonChargeInfo) = 2 ;
     }
-
 
     (tWriter->evtNumber)=( event_tot );
     tWriter->fill();

@@ -30,7 +30,7 @@ public:
 
     void    setSsForTag(int iB) { ssIndex_ = iB; }
     void    setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoCut);
-    void    inizializeOSMuonMvaReader(TString weightsFile, TString path);
+    void    inizializeOSMuonMvaTagReader(TString weightsFile, TString path);
 
 private:    
     TString methodNameFromWeightName();
@@ -66,7 +66,7 @@ private:
     float muoJetEnergyRatio_;
     float muoJetCSV_;
     float muoJetDFprob_;
-    int   muoJetSize_;
+    float muoJetSize_;
 
     float muoQCone_;
 
@@ -74,7 +74,7 @@ private:
     float muoConePtRel_;
     float muoConeDr_;
     float muoConeEnergyRatio_;
-    int   muoConeSize_;
+    float muoConeSize_;
 
     float muoCharge_;
 
