@@ -84,13 +84,16 @@ TString OSMuonMvaTag::methodNameFromWeightName()
     return name;
 }
 
-int OSMuonMvaTag::getOsMuon(int iB = -999)
+int OSMuonMvaTag::getOsMuon()
 {
+    if(ssIndex_ < 0){ cout<<"SS NOT INITIALIZED"<<endl; return 0; }
 
-    if(iB == -999) iB = ssIndex_;
+    int iB = ssIndex_;
+    int iPV = pvIndex_;
 
     vector <int> tkSsB = tracksFromSV(iB);
     TLorentzVector tB = GetTLorentzVecFromJpsiX(iB);
+    if(pvIndex_ < 0) pvIndex_ = GetBestPV(iB, tB);
 
     int bestMuIndex = -1;
     float bestMuPt = 2.;
@@ -108,7 +111,7 @@ int OSMuonMvaTag::getOsMuon(int iB = -999)
        
         if(!isMvaMuon(iMuon, wpB_, wpE_)) continue;
 
-        if(abs(dZ(itkmu, GetBestPV(iB, tB))) > dzCut_) continue;
+        if(abs(dZ(itkmu, iPV)) > dzCut_) continue;
         if(GetMuoPFiso(iMuon) > PFIsoCut_)  continue;
 
         if(muoPt->at( iMuon ) > bestMuPt){
@@ -129,6 +132,7 @@ void OSMuonMvaTag::computeVariables()
 
     int iB = ssIndex_;
     int iMuon = osMuonIndex_;
+    int iPV = pvIndex_;
 
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
     TLorentzVector tB = GetTLorentzVecFromJpsiX(iB);
@@ -138,8 +142,8 @@ void OSMuonMvaTag::computeVariables()
 
     muoPt_ = muoPt->at(iMuon);
     absmuoEta_ = abs(muoEta->at(iMuon));
-    muoDxy_= GetSignedDxy(iMuon, iB);
-    muoDz_= dZ(itkmu, iB);
+    muoDxy_= GetSignedDxy(iMuon, iPV);
+    muoDz_= dZ(itkmu, iPV);
     muoSoftMvaValue_= computeMva(iMuon);
     muoDrB_= deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     muoPFIso_= GetMuoPFiso(iMuon);
@@ -216,22 +220,25 @@ void OSMuonMvaTag::computeVariables()
 
 }
 
-int OSMuonMvaTag::getOsMuonTag(int iB = -1)
+int OSMuonMvaTag::getOsMuonTag()
 {
-    if(ssIndex_ < 0) ssIndex_ = iB;
-    getOsMuon(ssIndex_);
+    if(ssIndex_ < 0){ cout<<"SS NOT INITIALIZED"<<endl; return -999; }
+    getOsMuon();
     if(osMuonIndex_ < 0) return 0;
 
     return -1*trkCharge->at(osMuonTrackIndex_); 
 }
 
-float OSMuonMvaTag::getOsMuonMvaValue()
+float OSMuonMvaTag::getOsMuonTagMvaValue()
 {
+    if(ssIndex_ < 0){ cout<<"SS NOT INITIALIZED"<<endl; return -999; }
+    if(osMuonIndex_ < 0){ cout<<"WARNING: OS MU NOT INITIALIZED"<<endl; getOsMuon(); }
+    
     computeVariables();
     return osMuonTagReader_.EvaluateMVA(methodName_);
 }
 
-/*float OSMuonMvaTag::getOsMuonMistagProb()
+/*float OSMuonMvaTag::getOsMuonTagMistagProb()
 {
     //todo
 }

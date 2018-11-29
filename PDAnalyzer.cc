@@ -276,7 +276,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     int iSsPV = GetBestPV(iSsB, tB);
     if(iSsPV < 0) return false;
 
-    setSsForTag(iSsB);
+    setSsForTag(iSsB, iSsPV);
 
     //FILLING SS
     (tWriter->ssbPt) = tB.Pt();
@@ -337,6 +337,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     //INDICES
     int iMuon = bestMuIndex;
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
+
+    cout<<getOsMuonTagMvaValue()<<endl;
 
     //GEN INFO
     int genMuIndex = -1;

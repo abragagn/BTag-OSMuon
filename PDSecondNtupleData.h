@@ -96,6 +96,7 @@ void initTree() {
 
     setBranch( "evtNumber", &evtNumber, "evtNumber/I", &b_evtNumber );
     setBranch( "evtWeight", &evtWeight, "evtWeight/F", &b_evtWeight );
+
     setBranch( "hltJpsiMu", &hltJpsiMu , "hltJpsiMu/I" , &b_hltJpsiMu );
     setBranch( "hltJpsiTrkTrk", &hltJpsiTrkTrk , "hltJpsiTrkTrk/I" , &b_hltJpsiTrkTrk );
     setBranch( "hltJpsiTrk", &hltJpsiTrk , "hltJpsiTrk/I" , &b_hltJpsiTrk );

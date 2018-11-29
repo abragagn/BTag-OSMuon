@@ -23,12 +23,12 @@ public:
     OSMuonMvaTag();
     ~OSMuonMvaTag();
 
-    int     getOsMuon(int iB);
-    int     getOsMuonTag(int iB);
-    float   getOsMuonMvaValue();
-    float   getOsMuonMistagProb();
+    int     getOsMuon();
+    int     getOsMuonTag();
+    float   getOsMuonTagMvaValue();
+    float   getOsMuonTagMistagProb();
 
-    void    setSsForTag(int iB) { ssIndex_ = iB; }
+    void    setSsForTag(int iB, int iPV) { ssIndex_ = iB; pvIndex_ = iPV;}
     void    setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoCut);
     void    inizializeOSMuonMvaTagReader(TString weightsFile, TString path);
 
@@ -42,6 +42,7 @@ private:
     TString methodName_;
 
     int ssIndex_;
+    int pvIndex_;
     int osMuonIndex_;
     int osMuonTrackIndex_;
 
