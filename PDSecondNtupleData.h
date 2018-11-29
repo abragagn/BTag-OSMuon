@@ -47,6 +47,8 @@ void initTree() {
     setBranch( "osMuon", &osMuon, "osMuon/I", &b_osMuon );
     setBranch( "osMuonTag", &osMuonTag, "osMuonTag/I", &b_osMuonTag );
     setBranch( "osMuonChargeInfo", &osMuonChargeInfo, "osMuonChargeInfo/I", &b_osMuonChargeInfo );
+    setBranch( "osMuonTagMvaValue", &osMuonTagMvaValue, "osMuonTagMvaValue/F", &b_osMuonTagMvaValue );
+    setBranch( "osMuonTagMistag", &osMuonTagMistag, "osMuonTagMistag/F", &b_osMuonTagMistag );
 
     setBranch( "muoPt", &muoPt, "muoPt/F", &b_muoPt );
     setBranch( "muoEta", &muoEta, "muoEta/F", &b_muoEta );
@@ -120,10 +122,12 @@ TBranch *b_muoLund, *b_muoAncestor, *b_muoSoftMvaValue;
 
 
 int osMuon, osMuonTag, osMuonChargeInfo;
+float osMuonTagMvaValue, osMuonTagMistag;
 float muoDrB, muoDzPV, muoPFIso, muoQCone;
 int muoHowMany;
 
 TBranch *b_osMuon, *b_osMuonTag, *b_osMuonChargeInfo, *b_muoDrB, *b_muoPFIso, *b_muoQCone, *b_muoDzPV, *b_muoHowMany;
+TBranch *b_osMuonTagMvaValue, *b_osMuonTagMistag;
 
 int muoJetSize;
 float muoJetPtRel, muoJetDr, muoJetEnergyRatio, muoJetQ, muoJetCSV, muoJetDFprob, muoJetPt;
