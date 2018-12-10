@@ -60,8 +60,8 @@ void fitMVA(TString file = "./BsMC/ntuBsMC2016.root", TString cutEvt = "")
     float   *catW       = new float[nPoints];
     float   *catP       = new float[nPoints];
 
-    catEdges[0] = 0;
     catEdges[nPoints] = 1;
+    catEdges[0] = 0;
     for(int i=0; i<nPoints; ++i){
         catRT[i] = 0;
         catWT[i] = 0;
@@ -81,11 +81,15 @@ void fitMVA(TString file = "./BsMC/ntuBsMC2016.root", TString cutEvt = "")
 
     for(int i=0; i<nPoints; ++i)
     {
-        catW[i] = catWT[i] / (catWT[i] + catRT[i]);
+        catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
         cout<<"CAT "<<i+1<<" ["<<catEdges[i]<<" - "<<catEdges[i+1]<<" ] ";
         cout<<catRT[i]<<" "<<catWT[i]<<endl;
     }
 
-    
+
+
+    TGraph* gr = new TGraph(nPoints,catEdgesW0,catW);
+    TCanvas *c1 = new TCanvas();
+    gr->Draw("AP*");
 
 }

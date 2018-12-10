@@ -5,12 +5,12 @@ float calculateFOM( TString eta = "B", TString addCut = "", bool verbose = false
 	gStyle->SetOptFit(0); 	gStyle->SetStatBorderSize(0);
 	gStyle->SetStatX(.49); 	gStyle->SetStatY(.89);
 
-	TFile *f = new TFile("ntuBs2017.root");
+	TFile *f = new TFile("./BsMC/ntuBsMC2017.root");
 	TTree *t = (TTree*)f ->Get("PDsecondTree");
 
 	int nBins=50;
-	float min=0.;
-	float max=1.;
+	float min=0.86;
+	float max=0.92;
 
 	TH1F *Tot = new TH1F( "Tot", "Tot", 100, 5.0, 6.0 );
 	TH1F *Sgn = new TH1F( "Sgn", "Sgn", nBins, min, max );
