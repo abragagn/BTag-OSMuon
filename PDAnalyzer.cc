@@ -48,7 +48,7 @@ PDAnalyzer::PDAnalyzer() {
     setUserParameter( "muoDzCut", "1." ); 
     setUserParameter( "muoPFIsoCut", "5" ); 
 
-    setUserParameter( "muonMvaMethod", "DNNGlobal2016woIPwIso" ); 
+    setUserParameter( "muonMvaMethod",      "BDTMuonID2017woIPwIso" ); 
     setUserParameter( "osMuonTagMvaMethod", "BDTOsMuon2016Jet" ); 
 
     setUserParameter( "ptCut", "40.0" ); //needed for paolo's code for unknow reasons
@@ -321,6 +321,9 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }
 
     (tWriter->osMuon) = 1;
+    (tWriter->osMuonTagMvaValue) = getOsMuonTagMvaValue();
+    //(tWriter->osMuonTagMistag) = 
+
     hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
 
     if( TMath::Sign(1, ssBLund) == tagDecision ){ 
@@ -333,13 +336,12 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->osMuonTag) = 0 ;
     }
 
+
+
     //COMPLEX TAGGING VARIABLES
     //INDICES
     int iMuon = bestMuIndex;
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
-
-    cout<<getOsMuonTagMvaValue()<<endl;
-
     //GEN INFO
     int genMuIndex = -1;
     int muoLund=0, muoAncestor=-1; 
@@ -522,7 +524,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoExy) = trkExy->at(itkmu);
     (tWriter->muoEz) = trkEz->at(itkmu);
 
-    (tWriter->muoSoftMvaValue) = computeMva(iMuon);
+    (tWriter->muoSoftMvaValue) = computeMuonMva(iMuon);
 
     (tWriter->muoLund) = muoLund;
     (tWriter->muoAncestor) = muoAncestor; 

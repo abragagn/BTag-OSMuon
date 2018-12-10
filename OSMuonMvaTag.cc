@@ -38,7 +38,7 @@ void OSMuonMvaTag::setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoC
 
 void OSMuonMvaTag::inizializeOSMuonMvaTagReader(
     TString methodName, 
-    TString path = "/lustre/cmswork/abragagn/weights/OsMuonTag/" )
+    TString path = "/lustre/cmswork/abragagn/mvaWeights/OsMuonTag/" )
 {
 
     TMVA::PyMethodBase::PyInitialize();
@@ -144,7 +144,7 @@ void OSMuonMvaTag::computeVariables()
     absmuoEta_ = abs(muoEta->at(iMuon));
     muoDxy_= GetSignedDxy(iMuon, iPV);
     muoDz_= dZ(itkmu, iPV);
-    muoSoftMvaValue_= computeMva(iMuon);
+    muoSoftMvaValue_= computeMuonMva(iMuon);
     muoDrB_= deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     muoPFIso_= GetMuoPFiso(iMuon);
 
