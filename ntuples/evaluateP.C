@@ -18,9 +18,9 @@ void evaluateP(TString file = "./BsMC/ntuBsMC2016.root",  TString cutEvt = "", T
         min_ = 5.25;
         max_ = 5.50;
     }
-    if(file.Contains("Bp")){
+    if(file.Contains("Bu")){
         process = "BuJPsiK";
-        min_ = 5.00;
+        min_ = 5.10;
         max_ = 5.50;
     }
 

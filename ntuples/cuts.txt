@@ -5,3 +5,20 @@ mvaEndcap > 0.60 (S 90%, B 25%)
 ---- 2017 ---- TMVAGlobalBarrel2017woIPwIso.root
 mvaBarrel > 0.8910 (S 95%, B 35%)
 mvaEndcap > 0.8925 (S 90%, B 20%)
+
+
+PERFORMANCE
+
+---- Bs MC 2017 ---- BASELINE ----
+                    eff         w           P
+hltJpsiMu       49.7886%    31.2321%    7.01492%
+hltJpsiTrkTrk   5.48236%    35.1373%    0.484419%
+OR              9.03347%    33.2754%    1.0107%
+
+---- Bu MC 2017 ---- BASELINE ----
+                eff         w           P
+hltJpsiMu       48.7687%    32.2365%    6.1554%
+
+---- Bu Data 2017 ---- BASELINE ----
+                eff         w           P
+hltJpsiMu       49.566%     32.4828%    6.08374%
