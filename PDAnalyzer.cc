@@ -374,7 +374,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
     }
 
-    qCone /= ptCone;
+    if(ptCone != 0) qCone /= ptCone;
+    else qCone = 1;
     qCone *= trkCharge->at(itkmu); //removing dependency from the muon charge sign
     
     //JET variables
