@@ -56,26 +56,19 @@ private:
     float muoPt_;
     float absmuoEta_;
     float muoDxy_;
-    float muoDz_;
+    float absmuoDz_;
     float muoSoftMvaValue_;
     float muoDrB_;
     float muoPFIso_;
 
-    float muoJetPt_;
-    float muoJetPtRel_;
-    float muoJetDr_;
-    float muoJetEnergyRatio_;
+    float muoJetConePt_;
+    float muoJetConePtRel_;
+    float muoJetConeDr_;
+    float muoJetConeEnergyRatio_;
     float muoJetCSV_;
     float muoJetDFprob_;
-    float muoJetSize_;
-
-    float muoQCone_;
-
-    float muoConePt_;
-    float muoConePtRel_;
-    float muoConeDr_;
-    float muoConeEnergyRatio_;
-    float muoConeSize_;
+    float muoJetConeSize_;
+    float muoJetConeQ_;
 
     float muoCharge_;
 

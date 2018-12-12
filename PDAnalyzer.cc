@@ -352,32 +352,10 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         muoAncestor = GetAncestor( genMuIndex, &ListB ); 
     }
 
-    //Muon Cone Charge
+    //Cone
     float kappa = 1;
     float drCharge = 0.4;
-    float qCone=0, ptCone=0;
 
-    for(int ipf = 0; ipf<nPF; ++ipf){
-
-        float pfpfc = pfcPt->at(ipf);
-        float etapfc = pfcEta->at(ipf);
-
-        if( deltaR(etapfc, pfcPhi->at(ipf), muoEta->at(iMuon), muoPhi->at(iMuon)) > drCharge ) continue;
-
-        if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
-
-        if(pfpfc < 0.2) continue;
-        if(abs(etapfc) > 2.5) continue;
-
-        qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
-        ptCone += pow(pfpfc, kappa);
-
-    }
-
-    if(ptCone != 0) qCone /= ptCone;
-    else qCone = 1;
-    qCone *= trkCharge->at(itkmu); //removing dependency from the muon charge sign
-    
     //JET variables
     int iJet = trkJet->at(itkmu);
     if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
@@ -455,14 +433,25 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     TLorentzVector tCone, tMu;
     tCone.SetPtEtaPhiM(0.,0.,0.,0.);
     tMu.SetPtEtaPhiM(muoPt->at( iMuon ), muoEta->at( iMuon ), muoPhi->at( iMuon ), MassMu);
+    float qCone=0, ptCone=0;
 
     for(int i=0; i<nPF; ++i){
-        if( deltaR(pfcEta->at( i ), pfcPhi->at( i ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > 0.4) continue;
-        TLorentzVector a;
+        float pfpfc = pfcPt->at(ipf);
+        float etapfc = pfcEta->at(ipf);
+        if( deltaR(etapfc, pfcPhi->at( i ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
+        if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
+        if(pfpfc < 0.2) continue;
+        if(abs(etapfc) > 2.5) continue;        TLorentzVector a;
         a.SetPxPyPzE(pfcPx->at(i), pfcPy->at(i), pfcPz->at(i), pfcE->at(i));
         tCone += a;
         ++muoConeSize;
+        qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
+        ptCone += pow(pfpfc, kappa);
     }
+
+    if(ptCone != 0) qCone /= ptCone;
+    else qCone = 1;
+    qCone *= trkCharge->at(itkmu);
 
     muoConePt = tCone.Pt();
     muoConeDr = deltaR(tCone.Eta(), tCone.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
@@ -542,7 +531,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoJetDFprob) = muoJetDFprob;
     (tWriter->muoJetSize) = muoJetSize;
 
-    (tWriter->muoQCone) = qCone;
     (tWriter->muoHowMany) = nMuonsSel;
 
     (tWriter->muoSvtPt)  = muoSvtPt;
