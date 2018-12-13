@@ -435,14 +435,15 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     tMu.SetPtEtaPhiM(muoPt->at( iMuon ), muoEta->at( iMuon ), muoPhi->at( iMuon ), MassMu);
     float qCone=0, ptCone=0;
 
-    for(int i=0; i<nPF; ++i){
+    for(int ipf=0; ipf<nPF; ++ipf){
         float pfpfc = pfcPt->at(ipf);
         float etapfc = pfcEta->at(ipf);
-        if( deltaR(etapfc, pfcPhi->at( i ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
+        if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
         if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
         if(pfpfc < 0.2) continue;
-        if(abs(etapfc) > 2.5) continue;        TLorentzVector a;
-        a.SetPxPyPzE(pfcPx->at(i), pfcPy->at(i), pfcPz->at(i), pfcE->at(i));
+        if(abs(etapfc) > 2.5) continue;        
+        TLorentzVector a;
+        a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
         tCone += a;
         ++muoConeSize;
         qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);

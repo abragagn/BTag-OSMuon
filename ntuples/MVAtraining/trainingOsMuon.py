@@ -26,14 +26,14 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
     model.add(Dropout(dropValue))
 
     for i in range(1, nLayers):
-
         model.add(Dense(layerSize, activation='relu', kernel_initializer='normal'))
-        model.add(Dropout(dropValue))
+        if dropValue != 0:
+            model.add(Dropout(dropValue))
 
     model.add(Dense(2, activation='softmax'))
 
     # Set loss and optimizer
-    sgd = SGD(lr=0.01, decay=1e-6, momentum=0.9, nesterov=True)
+    sgd = SGD(lr=0.05, decay=1e-5, momentum=0.9, nesterov=True)
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
     # Store model to file
@@ -48,7 +48,7 @@ TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
 DNNFLAG= True
-BDTFLAG = True
+BDTFLAG = False
 
 
 # Load data
@@ -68,6 +68,13 @@ cutBkg = cut + '&&osMuonTag==0'
 # Prepare factory
 
 nTest = sys.argv[1]
+layerSize = sys.argv[2]
+nLayers = sys.argv[3]
+dropValue = sys.argv[4]
+
+layerSize = int(layerSize)
+nLayers = int(nLayers)
+dropValue = float(dropValue)
 
 name = 'OsMuon2017test' + nTest
 
@@ -80,7 +87,7 @@ factory = TMVA.Factory('TMVAClassification', output,
 
 dataloader = TMVA.DataLoader('dataset')
 
-varListTest1 = [
+varList = [
     ('muoPt', 'F')
     ,('abs_muoEta := abs(muoEta)', 'F')
     ,('muoDxy', 'F')
@@ -92,7 +99,6 @@ varListTest1 = [
     ,('muoJetConePtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel', 'F')
     ,('muoJetConeDr := muoJetPt != -1 ? muoJetDr : muoConeDr', 'F')
     ,('muoJetConeEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio', 'F')
-    ,('muoJetCSV', 'F')
     ,('muoJetDFprob', 'F')
     ,('muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize', 'I')
     ,('muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
@@ -114,15 +120,23 @@ varListTest2 = [
     ,('muoJetQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
     ]
 
+varListTest3 = [
+    ('muoPt', 'F')
+    ,('abs_muoEta := abs(muoEta)', 'F')
+    ,('muoDxy', 'F')
+    ,('abs_muoDz := abs(muoDz)', 'F')
+    ,('muoSoftMvaValue', 'F')
+    ,('muoDrB', 'F')
+    ,('muoPFIso', 'F')
+    ,('muoJetConePt := muoJetPt != -1 ? muoJetPt : muoConePt', 'F')
+    ,('muoJetConePtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel', 'F')
+    ,('muoJetConeDr := muoJetPt != -1 ? muoJetDr : muoConeDr', 'F')
+    ,('muoJetConeEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio', 'F')
+    ,('muoJetDFprob', 'F')
+    ,('muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize', 'I')
+    ,('muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
+    ]
 
-if nTest == '1':
-    varList = varListTest1
-
-if nTest == '2':
-    varList = varListTest2
-
-if nTest == '3':
-    varList = varListTest3
 
 nVars = 0
 
@@ -141,10 +155,10 @@ dataloader.PrepareTrainingAndTestTree(TCut(cutSgn), TCut(cutBkg), dataloaderOpt)
 
 # Define Keras Model
 if DNNFLAG:
-    modelName = getKerasModel(nVars, 'model2017.h5')
+    modelName = getKerasModel(nVars, 'model' + name + '.h5', layerSize, nLayers, dropValue)
 
     # Book methods
-    dnnOptions = '!H:!V:NumEpochs=1000:TriesEarlyStopping=50:BatchSize=128:FilenameModel='
+    dnnOptions = '!H:!V:NumEpochs=250:TriesEarlyStopping=50:BatchSize=128:FilenameModel='
 
     dnnOptions = dnnOptions + modelName
 

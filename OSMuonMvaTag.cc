@@ -46,8 +46,8 @@ void OSMuonMvaTag::inizializeOSMuonMvaTagReader(
 
     osMuonTagReader_.AddVariable( "muoPt", &muoPt_);
     osMuonTagReader_.AddVariable( "abs_muoEta", &absmuoEta_);
-    osMuonTagReader_.AddVariable( "muoDxy", &absmuoDz_);
-    osMuonTagReader_.AddVariable( "abs_muoDz", &muoDz_);
+    osMuonTagReader_.AddVariable( "muoDxy", &muoDxy_);
+    osMuonTagReader_.AddVariable( "abs_muoDz", &absmuoDz_);
     osMuonTagReader_.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
     osMuonTagReader_.AddVariable( "muoDrB", &muoDrB_);
     osMuonTagReader_.AddVariable( "muoPFIso", &muoPFIso_);
@@ -129,17 +129,6 @@ void OSMuonMvaTag::computeVariables()
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
     TLorentzVector tB = GetTLorentzVecFromJpsiX(iB);
     vector <int> tkSsB = tracksFromSV(iB);
-
-    DUMMY_ = -1;
-
-    muoPt_ = muoPt->at(iMuon);
-    absmuoEta_ = abs(muoEta->at(iMuon));
-    muoDxy_= GetSignedDxy(iMuon, iPV);
-    absmuoDz_= abs(dZ(itkmu, iPV));
-    muoSoftMvaValue_= computeMuonMva(iMuon);
-    muoDrB_= deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
-    muoPFIso_= GetMuoPFiso(iMuon);
-
     float kappa = 1;
 
     //JET VARIABLES
@@ -148,13 +137,13 @@ void OSMuonMvaTag::computeVariables()
     if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
     TVector3 vMu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
 
-    muoJetPt = -1;
+    float muoJetPt = -1;
     float muoJetPtRel = -1;
     float muoJetDr = -1;
     float muoJetEnergyRatio = -1;
     float muoJetCSV = -1;
     float muoJetDFprob = -1;
-    int muoJetSize = -1;
+    float muoJetSize = -1;
     float muoJetQ = -1; 
 
     if(iJet>=0){
@@ -178,8 +167,8 @@ void OSMuonMvaTag::computeVariables()
     float muoConePtRel = -1;
     float muoConeDr = -1;
     float muoConeEnergyRatio = -1;
-    int muoConeSize = 0;
-    int muoConeQ = 0;
+    float muoConeSize = 0;
+    float muoConeQ = 0;
 
     TLorentzVector tCone, tMu;
     tCone.SetPtEtaPhiM(0.,0.,0.,0.);
@@ -188,16 +177,16 @@ void OSMuonMvaTag::computeVariables()
     float drCharge = 0.4;
     float qCone=0, ptCone=0;
 
-    for(int i=0; i<nPF; ++i){
+    for(int ipf=0; ipf<nPF; ++ipf){
         float pfpfc = pfcPt->at(ipf);
         float etapfc = pfcEta->at(ipf);
-        if( deltaR(etapfc, pfcPhi->at( i ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
+        if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
         if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
         if(pfpfc < 0.2) continue;
         if(abs(etapfc) > 2.5) continue;
 
         TLorentzVector a;
-        a.SetPxPyPzE(pfcPx->at(i), pfcPy->at(i), pfcPz->at(i), pfcE->at(i));
+        a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
         tCone += a;
         ++muoConeSize;
         qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
@@ -213,6 +202,23 @@ void OSMuonMvaTag::computeVariables()
     else qCone = 1;
     qCone *= trkCharge->at(itkmu); 
     muoConeQ = qCone;
+
+    DUMMY_ = -1;
+    muoPt_ = muoPt->at(iMuon);
+    absmuoEta_ = abs(muoEta->at(iMuon));
+    muoDxy_= GetSignedDxy(iMuon, iPV);
+    absmuoDz_= abs(dZ(itkmu, iPV));
+    muoSoftMvaValue_= computeMuonMva(iMuon);
+    muoDrB_= deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
+    muoPFIso_= GetMuoPFiso(iMuon);
+    muoJetConePt_ = muoJetPt != -1 ? muoJetPt : muoConePt;
+    muoJetConePtRel_ = muoJetPt != -1 ? muoJetPtRel : muoConePtRel;
+    muoJetConeDr_ = muoJetPt != -1 ? muoJetDr : muoConeDr;
+    muoJetConeEnergyRatio_ = muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio;
+    muoJetCSV_ = muoJetCSV;
+    muoJetDFprob_ = muoJetDFprob;
+    muoJetConeSize_ = muoJetPt != -1 ? muoJetSize : muoConeSize;
+    muoJetConeQ_ = muoJetPt != -1 ? muoJetQ : muoConeQ;
 
 }
 
