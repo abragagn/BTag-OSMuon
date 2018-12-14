@@ -23,7 +23,8 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
     model = Sequential()
 
     model.add(Dense(layerSize, activation='relu', kernel_initializer='normal', input_dim=inputDim))
-    model.add(Dropout(dropValue))
+    if dropValue != 0:
+        model.add(Dropout(dropValue))
 
     for i in range(1, nLayers):
         model.add(Dense(layerSize, activation='relu', kernel_initializer='normal'))
@@ -60,7 +61,7 @@ data = TFile.Open(file)
 tree = data.Get('PDsecondTree')
 
 cut = 'osMuon==1'
-cut += '&&!isnan(muoDxy)&&!isnan(muoQCone)&&!isnan(muoJetDFprob)'
+cut += '&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)'
 
 cutSgn = cut + '&&osMuonTag==1'
 cutBkg = cut + '&&osMuonTag==0'
