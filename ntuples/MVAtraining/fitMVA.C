@@ -109,7 +109,10 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
 
     int nEvents = t->GetEntries();
 
-    for(int i=0; i<nEvents; ++i){
+    std::vector<double> vKDE_RT;
+    std::vector<double> vKDE_WT;
+
+    for(int i=0; i<100000; ++i){
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
         if(!osMuon) continue;
@@ -125,12 +128,44 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
 
         float mvaValue = reader.EvaluateMVA(method);
         mva->Fill(mvaValue, evtWeight);
-        if(osMuonTag == 1) mva_RT->Fill(mvaValue, evtWeight);
-        if(osMuonTag == 0) mva_WT->Fill(mvaValue, evtWeight);
+        if(osMuonTag == 1){
+            mva_RT->Fill(mvaValue, evtWeight);
+            vKDE_RT.push_back(mvaValue);
+            if(evtWeight==2.0) vKDE_RT.push_back(mvaValue);
+        }
+        if(osMuonTag == 0){
+            mva_WT->Fill(mvaValue, evtWeight);
+            vKDE_WT.push_back(mvaValue);
+            if(evtWeight==2.0) vKDE_WT.push_back(mvaValue);
+        }
     }
+
+
 
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
+    int nRT = vKDE_RT.size();
+    int nWT = vKDE_WT.size();
+
+   // create TKDE class
+   double rhoRT = 1.06*mva_RT->GetStdDev()*pow(mva_RT->Integral(),-1/5);
+   double rhoWT = 1.06*mva_WT->GetStdDev()*pow(mva_WT->Integral(),-1/5);
+   TKDE * kde_RT = new TKDE(nRT, &vKDE_RT[0],0.0,1.0,"", rhoRT);
+   TKDE * kde_WT = new TKDE(nWT, &vKDE_WT[0],0.0,1.0,"", rhoWT);
+
+   TCanvas *c10 = new TCanvas();
+   mva_RT->Scale(1./mva_RT->Integral(),"width" );
+   mva_RT->Draw("");
+   mva_RT->SetStats(false);
+   kde_RT->Draw("SAME");
+
+   TCanvas *c11 = new TCanvas();
+   mva_WT->Scale(1./mva_WT->Integral(),"width" );
+   mva_WT->Draw("");
+   mva_WT->SetStats(false);
+   kde_WT->Draw("SAME");
+
+   return;
 /*
     TString base =  "evtWeight*((";
     TString cutRT = base + ")&&osMuon&&osMuonTag==1)";
