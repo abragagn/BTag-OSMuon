@@ -102,7 +102,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
     t->SetBranchAddress("osMuonTag", &osMuonTag);
     t->SetBranchAddress("evtWeight", &evtWeight);
 
-    int nBinsMva = 1000;
+    int nBinsMva = 500;
     TH1F *mva   = new TH1F( "mva", "mva", nBinsMva, 0.0, 1.0 );
     TH1F *mva_RT   = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
     TH1F *mva_WT   = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
@@ -150,25 +150,29 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
     t->Project("mB_WT", "mBMass", cutWT );
 */
 
-    int nPoints = 20;
-    int catSize = mva->GetEntries() / nPoints;
-
-    cout<<catSize<<endl<<endl;
+    int nCat = 20;
+    float histTotEnties = 0;
+    for(int i = 1; i<=nBinsMva; ++i) histTotEnties += mva->GetBinContent(i);
+    int catSize = histTotEnties / nCat;
+    cout<<histTotEnties<<endl<<catSize<<endl<<endl;
 
     int cTot = 0;
+    int hTot = 0;
     int cCenter = 0;
     
-    float   *catEdge    = new float[nPoints+1];
-    float   *catCenter  = new float[nPoints];
-    int     *catRT      = new int[nPoints];
-    int     *catWT      = new int[nPoints];
-    float   *catEff     = new float[nPoints];
-    float   *catW       = new float[nPoints];
-    float   *catP       = new float[nPoints];
+    float   *catEdge    = new float[nCat];
+    float   *catCenter  = new float[nCat];
+    int     *catRT      = new int[nCat];
+    int     *catWT      = new int[nCat];
+    float   *catEff     = new float[nCat];
+    float   *catW       = new float[nCat];
+    float   *catP       = new float[nCat];
 
-    catEdge[nPoints] = 1;
-    catEdge[0] = 0;
-    for(int i=0; i<nPoints; ++i){
+    float   *vexl = new float[nCat];
+    float   *vexh = new float[nCat];
+    float   *vey = new float[nCat];
+
+    for(int i=0; i<nCat; ++i){
         catRT[i] = 0;
         catWT[i] = 0;
         catCenter[i] = 0;
@@ -176,30 +180,55 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
 
     int cCat = 0;
     for(int i = 1; i<=nBinsMva; ++i){
-        cTot += mva->GetBinContent(i);
         cCenter += mva->GetBinCenter(i)*mva->GetBinContent(i);
         catRT[cCat] += mva_RT->GetBinContent(i);
         catWT[cCat] += mva_WT->GetBinContent(i);
+        cTot = cTot + mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
+        hTot = hTot  + mva->GetBinContent(i);
+        //cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
+        //cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
         if(cTot >= catSize){
-            catEdge[cCat+1] = mva->GetXaxis()->GetBinLowEdge(i+1);
+            catEdge[cCat] = mva->GetXaxis()->GetBinLowEdge(i+1);
             catCenter[cCat] = (float)cCenter/(float)cTot;
+            //cout<<" -----> cat "<<cCat<<", "<<cTot<<" ["<<catEdge[cCat]<<"]"<<endl;
             cTot = 0;
             cCenter = 0;
             cCat++;
         }
+        if(i==nBinsMva){
+            catCenter[cCat] = (float)cCenter/(float)cTot;
+            catEdge[cCat] = 1;
+        }
     }
 
-    for(int i=0; i<nPoints; ++i)
+    cout<<endl;
+
+    for(int i=0; i<nCat-1; ++i)
     {
         catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
-        cout<<"CAT "<<i+1<<" ["<<catEdge[i]<<" - "<<catEdge[i+1]<<" ] ";
+        vexh[i] = catEdge[i] - catCenter[i];
+        if(i!=0) vexl[i] = catCenter[i] - catEdge[i-1];
+        else     vexl[i] = catCenter[i] - 0;
+
+        vey[i] = sqrt(((float)catWT[i] * (float)catRT[i])/pow(((float)catWT[i] + (float)catRT[i]),3) );
+
+
+        cout<<"CAT "<<i+1;
+        if(i!=0) cout<<" ["<<catEdge[i-1]<<" - "<<catEdge[i]<<" ] ";
+        else     cout<<" ["<<"0.0"<<" - "<<catEdge[i]<<" ] ";
         cout<<" - "<<catCenter[i]<<" - ";
-        cout<<catRT[i]<<" "<<catWT[i]<<endl;
+        cout<<catRT[i] + catWT[i]<<endl;
     }
 
 
-    TGraph* gr = new TGraph(nPoints,catCenter,catW);
+    TGraph* gr = new TGraphAsymmErrors(nCat,catCenter,catW,vexl,vexh,vey,vey);
     TCanvas *c1 = new TCanvas();
-    gr->Draw("AP*");
+    gr->SetMarkerStyle(20);
+    gr->SetMarkerSize(.5);
+    gr->Draw("APE");
 
+    TCanvas *c2 = new TCanvas();
+    mva_RT->Draw("hist");
+    mva_WT->Draw("hist same");
+    mva_WT->SetLineColor(kRed);
 }
