@@ -96,7 +96,7 @@ void PDAnalyzer::beginJob() {
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
     inizializeMuonMvaReader( muonMvaMethod );
-    inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
+    //inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
@@ -321,7 +321,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }
 
     (tWriter->osMuon) = 1;
-    (tWriter->osMuonTagMvaValue) = getOsMuonTagMvaValue();
+    //(tWriter->osMuonTagMvaValue) = getOsMuonTagMvaValue();
     //(tWriter->osMuonTagMistag) = 
 
     hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
