@@ -15,7 +15,7 @@ void setGvars(TString filename)
     dir_ = dirPath;
 }
 
-void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "")
+void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMuon2017test231")
 {
     gErrorIgnoreLevel = kWarning;
     TFile *f = new TFile(file);
@@ -26,58 +26,81 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "")
     TMVA::Reader reader("!Color:Silent");
     TMVA::PyMethodBase::PyInitialize();
 
-    float muoPt_;
-    float absmuoEta_;
-    float muoDxy_;
-    float absmuoDz_;
-    float muoSoftMvaValue_;
-    float muoDrB_;
-    float muoPFIso_;
-    float muoJetConePt_;
-    float muoJetConePtRel_;
-    float muoJetConeDr_;
-    float muoJetConeEnergyRatio_;
+    float muoPt;
+    float absmuoEta;
+    float muoDxy;
+    float absmuoDz;
+    float muoSoftMvaValue;
+    float muoDrB;
+    float muoPFIso;
+    float muoJetConePt;
+    float muoJetConePtRel;
+    float muoJetConeDr;
+    float muoJetConeEnergyRatio;
     float muoJetDFprob;
-    float muoJetDFprob_;
-    float muoJetConeSize_;
-    float muoJetConeQ_;
-    float muoCharge_;
+    float muoJetConeSize;
+    float muoJetConeQ;
+    float muoCharge;
 
-    reader.AddVariable( "muoPt", &muoPt_);
-    reader.AddVariable( "abs_muoEta", &absmuoEta_);
-    reader.AddVariable( "muoDxy", &muoDxy_);
-    reader.AddVariable( "abs_muoDz", &absmuoDz_);
-    reader.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
-    reader.AddVariable( "muoDrB", &muoDrB_);
-    reader.AddVariable( "muoPFIso", &muoPFIso_);
-    reader.AddVariable( "muoJetConePt", &muoJetConePt_);
-    reader.AddVariable( "muoJetConePtRel", &muoJetConePtRel_);
-    reader.AddVariable( "muoJetConeDr", &muoJetConeDr_);
-    reader.AddVariable( "muoJetConeEnergyRatio", &muoJetConeEnergyRatio_);
-    reader.AddVariable( "muoJetDFprob", &muoJetDFprob_);
-    reader.AddVariable( "muoJetConeSize", &muoJetConeSize_);
-    reader.AddVariable( "muoJetConeConeQ", &muoJetConeQ_);
-    reader.BookMVA( method, "dataset/weights/" + method + ".weights.xml" );
 
-    t->SetBranchAddress("muoPt", &muoPt_);
-    t->SetBranchAddress("abs(muoEta)", &absmuoEta_);
-    t->SetBranchAddress("muoDxy", &muoDxy_);
-    t->SetBranchAddress("abs(muoDz)", &absmuoDz_);
-    t->SetBranchAddress("muoSoftMvaValue", &muoSoftMvaValue_);
-    t->SetBranchAddress("muoPFIso", &muoPFIso_);
-    t->SetBranchAddress("muoJetPt != -1 ? muoJetPt : muoConePt", &muoJetConePt_);
-    t->SetBranchAddress("muoJetPt != -1 ? muoJetPtRel : muoConePtRel", &muoJetConePtRel_);
-    t->SetBranchAddress("muoJetPt != -1 ? muoJetDr : muoConeDr", &muoJetConeDr_);
-    t->SetBranchAddress("muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio", &muoJetConeEnergyRatio_);
-    t->SetBranchAddress("muoJetDFprob", &muoJetDFprob_);
-    t->SetBranchAddress("muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize_);
-    t->SetBranchAddress("muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ_);
+    reader.AddVariable("muoPt", &muoPt);
+    reader.AddVariable("abs_muoEta := abs(muoEta)", &absmuoEta);
+    reader.AddVariable("muoDxy", &muoDxy);
+    reader.AddVariable("abs_muoDz := abs(muoDz)", &absmuoDz);
+    reader.AddVariable("muoSoftMvaValue", &muoSoftMvaValue);
+    reader.AddVariable("muoDrB", &muoDrB);
+    reader.AddVariable("muoPFIso", &muoPFIso);
+    reader.AddVariable("muoJetConePt := muoJetPt != -1 ? muoJetPt : muoConePt", &muoJetConePt);
+    reader.AddVariable("muoJetConePtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel", &muoJetConePtRel);
+    reader.AddVariable("muoJetConeDr := muoJetPt != -1 ? muoJetDr : muoConeDr", &muoJetConeDr);
+    reader.AddVariable("muoJetConeEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio", &muoJetConeEnergyRatio);
+    reader.AddVariable("muoJetDFprob", &muoJetDFprob);
+    reader.AddVariable("muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize);
+    reader.AddVariable("muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ);
+    reader.BookMVA( method, "dataset/weights/TMVAClassification_" + method + ".weights.xml" );
 
-    int osMuon_, osMuonTag_, evtWeight_;
 
-    t->SetBranchAddress("osMuon", &osMuon_);
-    t->SetBranchAddress("osMuonTag", &osMuonTag_);
-    t->SetBranchAddress("evtWeight", &evtWeight_);
+    float muoEta;
+    float muoDz;
+
+    float muoJetPt;
+    float muoJetPtRel;
+    float muoJetDr;
+    float muoJetEnergyRatio;
+    int muoJetSize;
+    float muoJetQ;
+
+    float muoConePt;
+    float muoConePtRel;
+    float muoConeDr;
+    float muoConeEnergyRatio;
+    int muoConeSize;
+    float muoConeQ;
+
+    t->SetBranchAddress("muoPt", &muoPt);
+    t->SetBranchAddress("muoEta", &muoEta);
+    t->SetBranchAddress("muoDxy", &muoDxy);
+    t->SetBranchAddress("muoDz", &muoDz);
+    t->SetBranchAddress("muoSoftMvaValue", &muoSoftMvaValue);
+    t->SetBranchAddress("muoJetPt", &muoJetPt);
+    t->SetBranchAddress("muoJetPtRel", &muoJetPtRel);
+    t->SetBranchAddress("muoJetDr", &muoJetDr);
+    t->SetBranchAddress("muoJetEnergyRatio", &muoJetEnergyRatio);
+    t->SetBranchAddress("muoJetSize", &muoJetSize);
+    t->SetBranchAddress("muoJetQ", &muoJetQ);
+    t->SetBranchAddress("muoConePt", &muoConePt);
+    t->SetBranchAddress("muoConePtRel", &muoConePtRel);
+    t->SetBranchAddress("muoConeDr", &muoConeDr);
+    t->SetBranchAddress("muoConeEnergyRatio", &muoConeEnergyRatio);
+    t->SetBranchAddress("muoConeSize", &muoConeSize);
+    t->SetBranchAddress("muoConeQ", &muoConeQ);
+
+    int osMuon, osMuonTag;
+    float evtWeight;
+
+    t->SetBranchAddress("osMuon", &osMuon);
+    t->SetBranchAddress("osMuonTag", &osMuonTag);
+    t->SetBranchAddress("evtWeight", &evtWeight);
 
     int nBinsMva = 1000;
     TH1F *mva   = new TH1F( "mva", "mva", nBinsMva, 0.0, 1.0 );
@@ -86,14 +109,27 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "")
 
     int nEvents = t->GetEntries();
 
-    for(int i =0; i<nEvents; ++i){
+    for(int i=0; i<nEvents; ++i){
+        if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
-        if(!osMuon_) continue;
+        if(!osMuon) continue;
+
+        absmuoEta = abs(muoEta);
+        absmuoDz = abs(muoDz);
+        muoJetConePt = muoJetPt != -1 ? muoJetPt : muoConePt;
+        muoJetConePtRel = muoJetPt != -1 ? muoJetPtRel : muoConePtRel;
+        muoJetConeDr = muoJetPt != -1 ? muoJetDr : muoConeDr;
+        muoJetConeEnergyRatio = muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio;
+        muoJetConeSize = muoJetPt != -1 ? (float)muoJetSize : (float)muoConeSize;
+        muoJetConeQ = muoJetPt != -1 ? muoJetQ : muoConeQ;
+
         float mvaValue = reader.EvaluateMVA(method);
-        mva->Fill(mvaValue, evtWeight_);
-        if(osMuonTag_ == 1) mva_RT->Fill(mvaValue, evtWeight_);
-        if(osMuonTag_ == 0) mva_WT->Fill(mvaValue, evtWeight_);
+        mva->Fill(mvaValue, evtWeight);
+        if(osMuonTag == 1) mva_RT->Fill(mvaValue, evtWeight);
+        if(osMuonTag == 0) mva_WT->Fill(mvaValue, evtWeight);
     }
+
+    cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
 /*
     TString base =  "evtWeight*((";
