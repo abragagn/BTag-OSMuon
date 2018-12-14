@@ -15,7 +15,7 @@ void setGvars(TString filename)
     dir_ = dirPath;
 }
 
-void fitMVA(TString file = "./BsMC/ntuBsMC2017.root", TString cutEvt = "")
+void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "")
 {
     gErrorIgnoreLevel = kWarning;
     TFile *f = new TFile(file);
@@ -23,28 +23,96 @@ void fitMVA(TString file = "./BsMC/ntuBsMC2017.root", TString cutEvt = "")
 
     setGvars(file);
 
-    TH1F *mB       = new TH1F( "mB", "mB", nBins_, min_, max_ );
-    TH1F *mB_RT    = new TH1F( "mB_RT", "mB_RT", nBins_, min_, max_ );
-    TH1F *mB_WT    = new TH1F( "mB_WT", "mB_WT", nBins_, min_, max_ );
+    TMVA::Reader reader("!Color:Silent");
+    TMVA::PyMethodBase::PyInitialize();
+
+    float muoPt_;
+    float absmuoEta_;
+    float muoDxy_;
+    float absmuoDz_;
+    float muoSoftMvaValue_;
+    float muoDrB_;
+    float muoPFIso_;
+    float muoJetConePt_;
+    float muoJetConePtRel_;
+    float muoJetConeDr_;
+    float muoJetConeEnergyRatio_;
+    float muoJetDFprob;
+    float muoJetDFprob_;
+    float muoJetConeSize_;
+    float muoJetConeQ_;
+    float muoCharge_;
+
+    reader.AddVariable( "muoPt", &muoPt_);
+    reader.AddVariable( "abs_muoEta", &absmuoEta_);
+    reader.AddVariable( "muoDxy", &muoDxy_);
+    reader.AddVariable( "abs_muoDz", &absmuoDz_);
+    reader.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
+    reader.AddVariable( "muoDrB", &muoDrB_);
+    reader.AddVariable( "muoPFIso", &muoPFIso_);
+    reader.AddVariable( "muoJetConePt", &muoJetConePt_);
+    reader.AddVariable( "muoJetConePtRel", &muoJetConePtRel_);
+    reader.AddVariable( "muoJetConeDr", &muoJetConeDr_);
+    reader.AddVariable( "muoJetConeEnergyRatio", &muoJetConeEnergyRatio_);
+    reader.AddVariable( "muoJetDFprob", &muoJetDFprob_);
+    reader.AddVariable( "muoJetConeSize", &muoJetConeSize_);
+    reader.AddVariable( "muoJetConeConeQ", &muoJetConeQ_);
+    reader.BookMVA( method, "dataset/weights/" + method + ".weights.xml" );
+
+    t->SetBranchAddress("muoPt", &muoPt_);
+    t->SetBranchAddress("abs(muoEta)", &absmuoEta_);
+    t->SetBranchAddress("muoDxy", &muoDxy_);
+    t->SetBranchAddress("abs(muoDz)", &absmuoDz_);
+    t->SetBranchAddress("muoSoftMvaValue", &muoSoftMvaValue_);
+    t->SetBranchAddress("muoPFIso", &muoPFIso_);
+    t->SetBranchAddress("muoJetPt != -1 ? muoJetPt : muoConePt", &muoJetConePt_);
+    t->SetBranchAddress("muoJetPt != -1 ? muoJetPtRel : muoConePtRel", &muoJetConePtRel_);
+    t->SetBranchAddress("muoJetPt != -1 ? muoJetDr : muoConeDr", &muoJetConeDr_);
+    t->SetBranchAddress("muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio", &muoJetConeEnergyRatio_);
+    t->SetBranchAddress("muoJetDFprob", &muoJetDFprob_);
+    t->SetBranchAddress("muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize_);
+    t->SetBranchAddress("muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ_);
+
+    int osMuon_, osMuonTag_, evtWeight_;
+
+    t->SetBranchAddress("osMuon", &osMuon_);
+    t->SetBranchAddress("osMuonTag", &osMuonTag_);
+    t->SetBranchAddress("evtWeight", &evtWeight_);
 
     int nBinsMva = 1000;
-
     TH1F *mva   = new TH1F( "mva", "mva", nBinsMva, 0.0, 1.0 );
     TH1F *mva_RT   = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
     TH1F *mva_WT   = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
 
-    if(cutEvt=="")  cutEvt = "1";
-    TString base =  "evtWeight*((" + cutEvt;
+    int nEvents = t->GetEntries();
+
+    for(int i =0; i<nEvents; ++i){
+        t->GetEntry(i);
+        if(!osMuon_) continue;
+        float mvaValue = reader.EvaluateMVA(method);
+        mva->Fill(mvaValue, evtWeight_);
+        if(osMuonTag_ == 1) mva_RT->Fill(mvaValue, evtWeight_);
+        if(osMuonTag_ == 0) mva_WT->Fill(mvaValue, evtWeight_);
+    }
+
+/*
+    TString base =  "evtWeight*((";
     TString cutRT = base + ")&&osMuon&&osMuonTag==1)";
     TString cutWT = base + ")&&osMuon&&osMuonTag==0)";
-
-    //t->Project("mB", "mBMass", base + "))");
-    //t->Project("mB_RT", "mBMass", cutRT );
-    //t->Project("mB_WT", "mBMass", cutWT );
 
     t->Project("mva", "osMuonTagMvaValue", cutRT + "||" + cutWT);
     t->Project("mva_RT", "osMuonTagMvaValue", cutRT);
     t->Project("mva_WT", "osMuonTagMvaValue", cutWT);
+*/
+
+/*
+    TH1F *mB       = new TH1F( "mB", "mB", nBins_, min_, max_ );
+    TH1F *mB_RT    = new TH1F( "mB_RT", "mB_RT", nBins_, min_, max_ );
+    TH1F *mB_WT    = new TH1F( "mB_WT", "mB_WT", nBins_, min_, max_ );
+    t->Project("mB", "mBMass", base + "))");
+    t->Project("mB_RT", "mBMass", cutRT );
+    t->Project("mB_WT", "mBMass", cutWT );
+*/
 
     int nPoints = 20;
     int catSize = mva->GetEntries() / nPoints;
@@ -89,12 +157,12 @@ void fitMVA(TString file = "./BsMC/ntuBsMC2017.root", TString cutEvt = "")
     {
         catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
         cout<<"CAT "<<i+1<<" ["<<catEdge[i]<<" - "<<catEdge[i+1]<<" ] ";
-        cout<<" - "<<cCenter[i]<<" - ";
+        cout<<" - "<<catCenter[i]<<" - ";
         cout<<catRT[i]<<" "<<catWT[i]<<endl;
     }
 
 
-    TGraph* gr = new TGraph(nPoints,catEdgeW0,catW);
+    TGraph* gr = new TGraph(nPoints,catCenter,catW);
     TCanvas *c1 = new TCanvas();
     gr->Draw("AP*");
 
