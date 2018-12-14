@@ -45,23 +45,23 @@ void OSMuonMvaTag::inizializeOSMuonMvaTagReader(
     setWeights(methodName, path);
 
     osMuonTagReader_.AddVariable( "muoPt", &muoPt_);
-    osMuonTagReader_.AddVariable( "abs_muoEta", &absmuoEta_);
+    osMuonTagReader_.AddVariable( "abs_muoEta := abs(muoEta)", &absmuoEta_);
     osMuonTagReader_.AddVariable( "muoDxy", &muoDxy_);
-    osMuonTagReader_.AddVariable( "abs_muoDz", &absmuoDz_);
+    osMuonTagReader_.AddVariable( "abs_muoDz := abs(muoDz)", &absmuoDz_);
     osMuonTagReader_.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
     osMuonTagReader_.AddVariable( "muoDrB", &muoDrB_);
     osMuonTagReader_.AddVariable( "muoPFIso", &muoPFIso_);
 
-    osMuonTagReader_.AddVariable( "muoJetConePt", &muoJetConePt_);
-    osMuonTagReader_.AddVariable( "muoJetConePtRel", &muoJetConePtRel_);
+    osMuonTagReader_.AddVariable( "muoJetConePt := muoJetPt != -1 ? muoJetPt : muoConePt", &muoJetConePt_);
+    osMuonTagReader_.AddVariable( "muoJetConePtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel", &muoJetConePtRel_);
     osMuonTagReader_.AddVariable( "muoJetConeDr", &muoJetConeDr_);
-    osMuonTagReader_.AddVariable( "muoJetConeEnergyRatio", &muoJetConeEnergyRatio_);
+    osMuonTagReader_.AddVariable( "muoJetConeEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio", &muoJetConeEnergyRatio_);
 
     osMuonTagReader_.AddVariable( "muoJetCSV", &muoJetCSV_);
     if(!weightsFile_.Contains("2016")) osMuonTagReader_.AddVariable( "muoJetDFprob", &muoJetDFprob_);
 
-    osMuonTagReader_.AddVariable( "muoJetConeSize", &muoJetConeSize_);
-    osMuonTagReader_.AddVariable( "muoJetConeConeQ", &muoJetConeQ_);
+    osMuonTagReader_.AddVariable( "muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize_);
+    osMuonTagReader_.AddVariable( "muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ_);
 
     osMuonTagReader_.BookMVA( methodName_, weightsFile_ );
 
