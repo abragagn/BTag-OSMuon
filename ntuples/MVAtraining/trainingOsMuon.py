@@ -48,8 +48,8 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
-DNNFLAG= True
-BDTFLAG = False
+DNNFLAG= False
+BDTFLAG = True
 
 
 # Load data

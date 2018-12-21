@@ -15,7 +15,7 @@ void setGvars(TString filename)
     dir_ = dirPath;
 }
 
-void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMuon2017test231")
+void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMuon2017test999")
 {
     gErrorIgnoreLevel = kWarning;
     TFile *f = new TFile(file);
@@ -109,13 +109,19 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
 
     int nEvents = t->GetEntries();
 
-    std::vector<double> vKDE_RT;
-    std::vector<double> vKDE_WT;
+    std::vector<double> vKDERT;
+    std::vector<double> vKDERT_w;
+    std::vector<double> vKDEWT;
+    std::vector<double> vKDEWT_w;
 
-    for(int i=0; i<100000; ++i){
+    for(int i=0; i<nEvents; ++i){
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
         if(!osMuon) continue;
+        if(isnan(muoDxy)) continue;
+        if(isnan(muoJetDFprob)) continue;
+        if(isinf(muoJetEnergyRatio)) continue;
+        if(isinf(muoConeEnergyRatio)) continue;
 
         absmuoEta = abs(muoEta);
         absmuoDz = abs(muoDz);
@@ -127,16 +133,17 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
         muoJetConeQ = muoJetPt != -1 ? muoJetQ : muoConeQ;
 
         float mvaValue = reader.EvaluateMVA(method);
+
         mva->Fill(mvaValue, evtWeight);
         if(osMuonTag == 1){
             mva_RT->Fill(mvaValue, evtWeight);
-            vKDE_RT.push_back(mvaValue);
-            if(evtWeight==2.0) vKDE_RT.push_back(mvaValue);
+            vKDERT.push_back(mvaValue);
+            vKDERT_w.push_back(evtWeight);
         }
         if(osMuonTag == 0){
             mva_WT->Fill(mvaValue, evtWeight);
-            vKDE_WT.push_back(mvaValue);
-            if(evtWeight==2.0) vKDE_WT.push_back(mvaValue);
+            vKDEWT.push_back(mvaValue);
+            vKDEWT_w.push_back(evtWeight);
         }
     }
 
@@ -144,28 +151,84 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
 
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
-    int nRT = vKDE_RT.size();
-    int nWT = vKDE_WT.size();
+    // create TKDE class
+    int nRT = vKDERT.size();
+    int nWT = vKDEWT.size();
 
-   // create TKDE class
-   double rhoRT = 1.06*mva_RT->GetStdDev()*pow(mva_RT->Integral(),-1/5);
-   double rhoWT = 1.06*mva_WT->GetStdDev()*pow(mva_WT->Integral(),-1/5);
-   TKDE * kde_RT = new TKDE(nRT, &vKDE_RT[0],0.0,1.0,"", rhoRT);
-   TKDE * kde_WT = new TKDE(nWT, &vKDE_WT[0],0.0,1.0,"", rhoWT);
+    auto itMaxRT = max_element(std::begin(vKDERT), std::end(vKDERT));
+    auto itMinRT = min_element(std::begin(vKDERT), std::end(vKDERT));
+    auto itMaxWT = max_element(std::begin(vKDEWT), std::end(vKDEWT));
+    auto itMinWT = min_element(std::begin(vKDEWT), std::end(vKDEWT));
 
-   TCanvas *c10 = new TCanvas();
-   mva_RT->Scale(1./mva_RT->Integral(),"width" );
-   mva_RT->Draw("");
-   mva_RT->SetStats(false);
-   kde_RT->Draw("SAME");
+    float xMin = *itMinWT < *itMinRT ? *itMinWT : *itMinRT;
+    float xMax = *itMaxRT > *itMaxWT ? *itMaxRT : *itMaxWT;
 
-   TCanvas *c11 = new TCanvas();
-   mva_WT->Scale(1./mva_WT->Integral(),"width" );
-   mva_WT->Draw("");
-   mva_WT->SetStats(false);
-   kde_WT->Draw("SAME");
+//    float rhoRT = pow(nRT,-1./5);
+//    float rhoWT = pow(nWT,-1./5);
 
-   return;
+    float rhoRT = 0.1;
+    float rhoWT = 0.1;
+
+    mva_RT->GetXaxis()->SetRangeUser(xMin, xMax);
+    mva_WT->GetXaxis()->SetRangeUser(xMin, xMax);
+
+    cout<<"nRT "<<nRT<<endl;
+    cout<<"nWT "<<nWT<<endl;
+    cout<<"xMin "<<xMin<<endl;
+    cout<<"xMax "<<xMax<<endl;    
+    cout<<"rhoRT "<<rhoRT<<endl;
+    cout<<"rhoWT "<<rhoWT<<endl;
+
+    TKDE::EMirror mirror = TKDE::kMirrorBoth;
+
+    TKDE *kdeRT = new TKDE(nRT, &vKDERT[0],&vKDERT_w[0],xMin,xMax,
+        "KernelType:Epanechnikov;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", rhoRT);
+    TKDE *kdeWT = new TKDE(nWT, &vKDEWT[0],&vKDEWT_w[0],xMin,xMax,
+        "KernelType:Epanechnikov;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", rhoWT);
+//    kdeRT->SetMirror(mirror);
+//    kdeWT->SetMirror(mirror);
+    TF1 *pdfRT = new TF1("pdfRT",kdeRT,xMin,xMax,0);
+    TF1 *pdfWT = new TF1("pdfWT",kdeWT,xMin,xMax,0);
+
+    pdfRT->SetLineColor(kBlue);
+    pdfRT->SetNpx(2000);
+    pdfWT->SetLineColor(kRed);
+    pdfWT->SetNpx(2000);
+
+/*    auto fRT = new TF1("fRT",
+        [&](double *x, double *p) { 
+            return mva_RT->Integral()*(*kdeRT)(x[0]); }, 
+        xMin,xMax,0);
+
+    auto fWT = new TF1("fRT",
+        [&](double *x, double *p) { 
+            return mva_WT->Integral()*(*kdeWT)(x[0]); }, 
+        xMin,xMax,0);
+*/
+
+    TCanvas *c10 = new TCanvas();
+    c10->Divide(2,2);
+    c10->cd(1);
+    mva_RT->Draw("hist");
+    c10->cd(2);
+    mva_WT->Draw("hist");
+    c10->cd(3);
+    pdfRT->Draw();
+    c10->cd(4);
+    pdfWT->Draw();
+
+    auto fW = new TF1("fW",
+        [&](double *x, double *p) { 
+            double yRT = nRT*(*kdeRT)(x[0]); 
+            double yWT = nWT*(*kdeWT)(x[0]); return yWT/(yWT+yRT); }, 
+        xMin,xMax,0);
+
+    TCanvas *c12 = new TCanvas();
+    fW->SetMarkerStyle(20);
+    fW->SetMarkerSize(1.);
+    fW->SetNpx(25);
+    fW->DrawClone("P");
+
 /*
     TString base =  "evtWeight*((";
     TString cutRT = base + ")&&osMuon&&osMuonTag==1)";
@@ -186,10 +249,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
 */
 
     int nCat = 20;
-    float histTotEnties = 0;
-    for(int i = 1; i<=nBinsMva; ++i) histTotEnties += mva->GetBinContent(i);
-    int catSize = histTotEnties / nCat;
-    cout<<histTotEnties<<endl<<catSize<<endl<<endl;
+    int nTot = nRT + nWT;
+    int catSize = nTot / nCat;
+    cout<<nTot<<endl<<catSize<<endl<<endl;
 
     int cTot = 0;
     int hTot = 0;
@@ -220,19 +282,19 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
         catWT[cCat] += mva_WT->GetBinContent(i);
         cTot = cTot + mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
         hTot = hTot  + mva->GetBinContent(i);
-        //cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
-        //cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
+        cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
+        cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
         if(cTot >= catSize){
             catEdge[cCat] = mva->GetXaxis()->GetBinLowEdge(i+1);
             catCenter[cCat] = (float)cCenter/(float)cTot;
-            //cout<<" -----> cat "<<cCat<<", "<<cTot<<" ["<<catEdge[cCat]<<"]"<<endl;
+            cout<<" -----> cat "<<cCat<<", "<<cTot<<" ["<<catEdge[cCat]<<"]"<<endl;
             cTot = 0;
             cCenter = 0;
             cCat++;
         }
         if(i==nBinsMva){
             catCenter[cCat] = (float)cCenter/(float)cTot;
-            catEdge[cCat] = 1;
+            catEdge[cCat] = xMax;
         }
     }
 
@@ -243,14 +305,14 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
         catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
         vexh[i] = catEdge[i] - catCenter[i];
         if(i!=0) vexl[i] = catCenter[i] - catEdge[i-1];
-        else     vexl[i] = catCenter[i] - 0;
+        else     vexl[i] = catCenter[i] - xMin;
 
         vey[i] = sqrt(((float)catWT[i] * (float)catRT[i])/pow(((float)catWT[i] + (float)catRT[i]),3) );
 
 
         cout<<"CAT "<<i+1;
         if(i!=0) cout<<" ["<<catEdge[i-1]<<" - "<<catEdge[i]<<" ] ";
-        else     cout<<" ["<<"0.0"<<" - "<<catEdge[i]<<" ] ";
+        else     cout<<" ["<<xMin<<" - "<<catEdge[i]<<" ] ";
         cout<<" - "<<catCenter[i]<<" - ";
         cout<<catRT[i] + catWT[i]<<endl;
     }
@@ -263,7 +325,12 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "DNNOsMu
     gr->Draw("APE");
 
     TCanvas *c2 = new TCanvas();
-    mva_RT->Draw("hist");
-    mva_WT->Draw("hist same");
+    mva_WT->Draw("hist");
+    mva_RT->Draw("hist same");
     mva_WT->SetLineColor(kRed);
+
+    TCanvas *c3 = new TCanvas();
+    gr->Draw("APE");
+    fW->SetLineColor(kGreen);
+    fW->DrawClone("P SAME");
 }
