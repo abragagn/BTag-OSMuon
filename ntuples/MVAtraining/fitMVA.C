@@ -42,7 +42,6 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     float muoJetConeQ;
     float muoCharge;
 
-
     reader.AddVariable("muoPt", &muoPt);
     reader.AddVariable("abs_muoEta := abs(muoEta)", &absmuoEta);
     reader.AddVariable("muoDxy", &muoDxy);
@@ -58,7 +57,6 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     reader.AddVariable("muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize);
     reader.AddVariable("muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ);
     reader.BookMVA( method, "dataset/weights/TMVAClassification_" + method + ".weights.xml" );
-
 
     float muoEta;
     float muoDz;
@@ -103,9 +101,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     t->SetBranchAddress("evtWeight", &evtWeight);
 
     int nBinsMva = 500;
-    TH1F *mva   = new TH1F( "mva", "mva", nBinsMva, 0.0, 1.0 );
-    TH1F *mva_RT   = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
-    TH1F *mva_WT   = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
+    TH1F *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );
+    TH1F *mva_RT = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
+    TH1F *mva_WT = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
 
     int nEvents = t->GetEntries();
 
@@ -118,10 +116,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
         if(!osMuon) continue;
-        if(isnan(muoDxy)) continue;
-        if(isnan(muoJetDFprob)) continue;
-        if(isinf(muoJetEnergyRatio)) continue;
-        if(isinf(muoConeEnergyRatio)) continue;
+        bool nanFlag = isnan(muoDxy) || isnan(muoJetDFprob) 
+                    || isinf(muoJetEnergyRatio) || isinf(muoConeEnergyRatio);
+        if(nanFlag) continue;
 
         absmuoEta = abs(muoEta);
         absmuoDz = abs(muoDz);
@@ -147,11 +144,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
         }
     }
 
-
-
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
-    // create TKDE class
+    //----------KDE----------
     int nRT = vKDERT.size();
     int nWT = vKDEWT.size();
 
@@ -163,11 +158,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     float xMin = *itMinWT < *itMinRT ? *itMinWT : *itMinRT;
     float xMax = *itMaxRT > *itMaxWT ? *itMaxRT : *itMaxWT;
 
-//    float rhoRT = pow(nRT,-1./5);
-//    float rhoWT = pow(nWT,-1./5);
-
-    float rhoRT = 0.1;
-    float rhoWT = 0.1;
+    float rhoRT = 0.1; // = pow(nRT,-1./5);
+    float rhoWT = 0.1; // = pow(nWT,-1./5);
 
     mva_RT->GetXaxis()->SetRangeUser(xMin, xMax);
     mva_WT->GetXaxis()->SetRangeUser(xMin, xMax);
@@ -185,8 +177,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
         "KernelType:Epanechnikov;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", rhoRT);
     TKDE *kdeWT = new TKDE(nWT, &vKDEWT[0],&vKDEWT_w[0],xMin,xMax,
         "KernelType:Epanechnikov;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", rhoWT);
-//    kdeRT->SetMirror(mirror);
-//    kdeWT->SetMirror(mirror);
+
     TF1 *pdfRT = new TF1("pdfRT",kdeRT,xMin,xMax,0);
     TF1 *pdfWT = new TF1("pdfWT",kdeWT,xMin,xMax,0);
 
@@ -229,6 +220,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     fW->SetNpx(25);
     fW->DrawClone("P");
 
+    //----------CATEGORIES----------
 /*
     TString base =  "evtWeight*((";
     TString cutRT = base + ")&&osMuon&&osMuonTag==1)";
@@ -248,10 +240,11 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     t->Project("mB_WT", "mBMass", cutWT );
 */
 
-    int nCat = 20;
+
+    int nCat = 25;
     int nTot = nRT + nWT;
     int catSize = nTot / nCat;
-    cout<<nTot<<endl<<catSize<<endl<<endl;
+    cout<<endl<<nTot<<endl<<catSize<<endl<<endl;
 
     int cTot = 0;
     int hTot = 0;
@@ -300,7 +293,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
 
     cout<<endl;
 
-    for(int i=0; i<nCat-1; ++i)
+    for(int i=0; i<nCat; ++i)
     {
         catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
         vexh[i] = catEdge[i] - catCenter[i];
@@ -322,6 +315,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
     TCanvas *c1 = new TCanvas();
     gr->SetMarkerStyle(20);
     gr->SetMarkerSize(.5);
+    gr->SetTitle("per-event mistag");
+    gr->GetXaxis()->SetTitle("MVA output");
     gr->Draw("APE");
 
     TCanvas *c2 = new TCanvas();
