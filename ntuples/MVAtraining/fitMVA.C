@@ -319,10 +319,25 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
 
         vey[i] = sqrt(((float)catWT[i] * (float)catRT[i])/pow(((float)catWT[i] + (float)catRT[i]),3) );
 
-        if(i!=0) cout<<catEdge[i-1]<<" "<<catEdge[i];
-        else     cout<<xMin<<" "<<catEdge[i];
-        cout<<" "<<catEff[i]<<" "<<catW[i]<<" "<<catP[i]<<endl;
+        cout<<"CAT "<<i+1;
+        if(i!=0) cout<<" ["<<catEdge[i-1]<<" - "<<catEdge[i]<<" ] ";
+        else     cout<<" ["<<xMin<<" - "<<catEdge[i]<<" ] ";
+        cout<<" - eff = "<<100*catEff[i]<<"%, w = "<<100*catW[i];
+        cout<<"%, P = "<<100*catP[i]<<"%"<<endl;
+        //cout<<" - "<<catCenter[i]<<" - ";
+        //cout<<catRT[i] + catWT[i]<<endl;
     }
+
+    ofstream myfile;
+    myfile.open ("cat.txt");
+    for(int i=0; i<nCat; ++i)
+    {
+        if(i!=0) myfile<<catEdge[i-1];
+        else     myfile<<xMin;
+        myfile<<" "<<catEdge[i]<<" ";
+        myfile<<catW[i]<<endl;
+    }
+    myfile.close();
 
     avgD /= totEff;
     float avgW = (1-avgD)/2;
