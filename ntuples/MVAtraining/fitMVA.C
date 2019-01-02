@@ -242,13 +242,14 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
 
 
     int nCat = 25;
-    int nTot = nRT + nWT;
-    int catSize = nTot / nCat;
-    cout<<endl<<nTot<<endl<<catSize<<endl<<endl;
+    int nTotTagged = nRT + nWT;
+    int catSize = nTotTagged / nCat;
+    cout<<endl<<nTotTagged<<endl<<catSize<<endl<<endl;
 
     int cTot = 0;
     int hTot = 0;
     int cCenter = 0;
+    int lastCat = 0;
     
     float   *catEdge    = new float[nCat];
     float   *catCenter  = new float[nCat];
@@ -275,8 +276,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
         catWT[cCat] += mva_WT->GetBinContent(i);
         cTot = cTot + mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
         hTot = hTot  + mva->GetBinContent(i);
-        cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
-        cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
+        //cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
+        //cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
         if(cTot >= catSize){
             catEdge[cCat] = mva->GetXaxis()->GetBinLowEdge(i+1);
             catCenter[cCat] = (float)cCenter/(float)cTot;
@@ -288,28 +289,51 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root", TString method = "BDTOsMu
         if(i==nBinsMva){
             catCenter[cCat] = (float)cCenter/(float)cTot;
             catEdge[cCat] = xMax;
+            lastCat = cCat;
+            cout<<" -----> cat "<<cCat<<", "<<cTot<<" ["<<catEdge[cCat]<<"]"<<endl;
         }
     }
 
     cout<<endl;
+    nCat = lastCat + 1;
+    float totEff = 0;
+    float totW = 0;
+    float avgD = 0;
+    float totP = 0;
 
     for(int i=0; i<nCat; ++i)
     {
+        catEff[i] = (float)(catWT[i] + catRT[i]) / (float)nEvents;
+        totEff += catEff[i];
+
         catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
+        avgD += catEff[i]*(1-2*catW[i]);
+
+        catP[i] = catEff[i]*pow(1-2*catW[i],2);
+        totP += catP[i];
+
+
         vexh[i] = catEdge[i] - catCenter[i];
         if(i!=0) vexl[i] = catCenter[i] - catEdge[i-1];
         else     vexl[i] = catCenter[i] - xMin;
 
         vey[i] = sqrt(((float)catWT[i] * (float)catRT[i])/pow(((float)catWT[i] + (float)catRT[i]),3) );
 
-
-        cout<<"CAT "<<i+1;
-        if(i!=0) cout<<" ["<<catEdge[i-1]<<" - "<<catEdge[i]<<" ] ";
-        else     cout<<" ["<<xMin<<" - "<<catEdge[i]<<" ] ";
-        cout<<" - "<<catCenter[i]<<" - ";
-        cout<<catRT[i] + catWT[i]<<endl;
+        if(i!=0) cout<<catEdge[i-1]<<" "<<catEdge[i];
+        else     cout<<xMin<<" "<<catEdge[i];
+        cout<<" "<<catEff[i]<<" "<<catW[i]<<" "<<catP[i]<<endl;
     }
 
+    avgD /= totEff;
+    float avgW = (1-avgD)/2;
+
+    cout<<endl<<"Total Eff = "<<100*totEff<<"%"<<endl;
+    cout<<"Averange W = "<<100*avgW<<"%"<<endl;
+    cout<<"Total P = "<<100*totP<<"%"<<endl;
+
+    cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEvents<<"%"<<endl;
+    cout<<"NoCat W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
+    cout<<"NoCat P = "<<100.*((float)(nRT+nWT)/nEvents)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
 
     TGraph* gr = new TGraphAsymmErrors(nCat,catCenter,catW,vexl,vexh,vey,vey);
     TCanvas *c1 = new TCanvas();
