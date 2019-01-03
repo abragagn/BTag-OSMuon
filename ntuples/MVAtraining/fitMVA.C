@@ -12,6 +12,7 @@ float *catMistag;
 int nCat;
 TString bestFit;
 TF1 *perEvtW;
+float totP = 0.;
 
 void setGvars(TString filename)
 {
@@ -55,6 +56,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             ifs >> catEdgeR[i];
             ifs >> catMistag[i];
         }
+        for(int i=0; i<nCat; ++i)
+            cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<endl;
 
         ifs.close();
     }
@@ -67,8 +70,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
         //CAT
         ifs >> nCat;
-        catEdgeL = new float[nCat];
-        catEdgeR = new float[nCat];
+        catEdgeL  = new float[nCat];
+        catEdgeR  = new float[nCat];
         catMistag = new float[nCat];
 
         for(int i=0; i<nCat; ++i){
@@ -76,6 +79,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             ifs >> catEdgeR[i];
             ifs >> catMistag[i];
         }
+        for(int i=0; i<nCat; ++i)
+            cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<endl;
+
         //FUNC
         ifs >> bestFit;
         int nPar;
@@ -204,11 +210,11 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         float evtW = -1;
         if(mode=="CAT"){
             if( mvaValue < catEdgeL[0] ){
-                evtCat = -1;
+                evtCat = -10;
                 evtW = catMistag[0];
-            }else if( mvaValue >= catEdgeR[nCat] ){
-                evtCat = -1;
-                evtW = catMistag[nCat];
+            }else if( mvaValue >= catEdgeR[nCat-1] ){
+                evtCat = -20;
+                evtW = catMistag[nCat-1];
             }else{
                 for(int j=0; j<nCat; ++j){
                     if(( mvaValue >= catEdgeL[j]) 
@@ -222,7 +228,12 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             }
         }
 
+        if(evtW==-1){cout<<"evtW==-1"<<endl; return;}
+
         if(mode=="FUNCTION") evtW = perEvtW->Eval(mvaValue);
+
+        totP =+ 1./(float)nEvents*pow(1.-2.*evtW ,2);
+        //cout<<mvaValue<<" "<<evtCat<<" "<<evtW<<endl;
 
         mva->Fill(mvaValue, evtWeight);
         if(osMuonTag == 1){
@@ -236,8 +247,6 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             vKDEWT_w.push_back(evtWeight);
         }
     }
-
-    cout<<"----- HISTOGRAMS LOOP FINISHED"<<endl;
 
     int nRT = mva_RT->Integral();
     int nWT = mva_WT->Integral();
@@ -403,7 +412,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         float totEff = 0;
         float totW = 0;
         float avgD = 0;
-        float totP = 0;
+        totP = 0;
 
         for(int i=0; i<nCat; ++i)
         {
@@ -509,5 +518,5 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     cout<<"NoCat W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
     cout<<"NoCat P = "<<100.*((float)(nRT+nWT)/nEvents)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
 
-
+    cout<<endl<<mode<<" P = "<<100.*totP<<"%"<<endl;
 }
