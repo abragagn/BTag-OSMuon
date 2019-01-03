@@ -237,8 +237,10 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
     }
 
-    int nRT = vKDERT.size();
-    int nWT = vKDEWT.size();
+    cout<<"----- HISTOGRAMS LOOP FINISHED"<<endl;
+
+    int nRT = mva_RT->Integral();
+    int nWT = mva_WT->Integral();
 
     auto itMaxRT = max_element(std::begin(vKDERT), std::end(vKDERT));
     auto itMinRT = min_element(std::begin(vKDERT), std::end(vKDERT));
@@ -247,6 +249,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     float xMin = *itMinWT < *itMinRT ? *itMinWT : *itMinRT;
     float xMax = *itMaxRT > *itMaxWT ? *itMaxRT : *itMaxWT;
+
 
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
@@ -265,8 +268,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         cout<<"nWT "<<nWT<<endl;
         cout<<"xMin "<<xMin<<endl;
         cout<<"xMax "<<xMax<<endl;    
-        cout<<"rhoRT "<<rhoRT<<endl;
-        cout<<"rhoWT "<<rhoWT<<endl;
+        //cout<<"rhoRT "<<rhoRT<<endl;
+        //cout<<"rhoWT "<<rhoWT<<endl;
 
         TKDE::EMirror mirror = TKDE::kMirrorBoth;
 
@@ -341,7 +344,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         nCat = 25;
         int nTotTagged = nRT + nWT;
         int catSize = nTotTagged / nCat;
-        cout<<endl<<nTotTagged<<endl<<catSize<<endl<<endl;
+        cout<<endl<<"nTotTagged "<<nTotTagged<<endl<<"catSize "<<catSize<<endl<<endl;
 
         int cTot = 0;
         int hTot = 0;
@@ -367,6 +370,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
 
         int cCat = 0;
+        int counter = 0;
         for(int i = 1; i<=nBinsMva; ++i){
             cCenter += mva->GetBinCenter(i)*mva->GetBinContent(i);
             catRT[cCat] += mva_RT->GetBinContent(i);
@@ -376,6 +380,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             //cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
             //cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
             if(cTot >= catSize){
+                counter += cTot;
                 catEdge[cCat] = mva->GetXaxis()->GetBinLowEdge(i+1);
                 catCenter[cCat] = (float)cCenter/(float)cTot;
                 cout<<" -----> cat "<<cCat<<", "<<cTot<<" ["<<catEdge[cCat]<<"]"<<endl;
@@ -384,6 +389,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
                 cCat++;
             }
             if(i==nBinsMva){
+                counter += cTot;
                 catCenter[cCat] = (float)cCenter/(float)cTot;
                 catEdge[cCat] = xMax;
                 lastCat = cCat;
@@ -392,6 +398,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
 
         cout<<endl;
+        cout<<counter<<endl;
         nCat = lastCat + 1;
         float totEff = 0;
         float totW = 0;
