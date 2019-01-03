@@ -12,7 +12,8 @@ float *catMistag;
 int nCat;
 TString bestFit;
 TF1 *perEvtW;
-float totP = 0.;
+float totPCat = 0.;
+float totPFunc = 0.;
 
 void setGvars(TString filename)
 {
@@ -207,33 +208,42 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         float mvaValue = reader.EvaluateMVA(method);
 
         int evtCat = -1;
-        float evtW = -1;
-        if(mode=="CAT"){
+        float evtWCat = -1;
+        float evtWFunc = -1;
+        if(mode=="CAT" || "FUNCTION"){
             if( mvaValue < catEdgeL[0] ){
                 evtCat = -10;
-                evtW = catMistag[0];
+                cout<<"Undercat"<<endl;
+                evtWCat = catMistag[0];
             }else if( mvaValue >= catEdgeR[nCat-1] ){
                 evtCat = -20;
-                evtW = catMistag[nCat-1];
+                cout<<"Overcat"<<endl;
+                evtWCat = catMistag[nCat-1];
             }else{
                 for(int j=0; j<nCat; ++j){
                     if(( mvaValue >= catEdgeL[j]) 
                         && (mvaValue < catEdgeR[j]) )
                     {
                         evtCat = j;
-                        evtW = catMistag[j];
+                        evtWCat = catMistag[j];
                         break;
                     }
                 }
             }
         }
 
-        if(evtW==-1){cout<<"evtW==-1"<<endl; return;}
+        totPCat += 1./(float)nEvents*pow(1.-2.*evtWCat, 2)*evtWeight;
 
-        if(mode=="FUNCTION") evtW = perEvtW->Eval(mvaValue);
+        if(mode=="FUNCTION"){
+            if( mvaValue < catEdgeL[0] )
+                evtWFunc = perEvtW->Eval(catEdgeL[0]);
+            else if( mvaValue >= catEdgeR[nCat-1] )
+                evtWFunc = perEvtW->Eval(catEdgeR[nCat-1]);
+            else
+                evtWFunc = perEvtW->Eval(mvaValue);
+        }
 
-        totP =+ 1./(float)nEvents*pow(1.-2.*evtW ,2);
-        //cout<<mvaValue<<" "<<evtCat<<" "<<evtW<<endl;
+        totPFunc += 1./(float)nEvents*pow(1.-2.*evtWFunc ,2)*evtWeight;
 
         mva->Fill(mvaValue, evtWeight);
         if(osMuonTag == 1){
@@ -412,7 +422,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         float totEff = 0;
         float totW = 0;
         float avgD = 0;
-        totP = 0;
+        float totP = 0;
 
         for(int i=0; i<nCat; ++i)
         {
@@ -518,5 +528,6 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     cout<<"NoCat W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
     cout<<"NoCat P = "<<100.*((float)(nRT+nWT)/nEvents)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
 
-    cout<<endl<<mode<<" P = "<<100.*totP<<"%"<<endl;
+    cout<<endl<<"Cat P = "<<100.*totPCat<<"%"<<endl;
+    cout<<"Func P = "<<100.*totPFunc<<"%"<<endl;
 }
