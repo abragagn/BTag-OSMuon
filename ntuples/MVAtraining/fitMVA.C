@@ -186,9 +186,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     TH1F *mva_WT = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
 
     std::vector<double> vKDERT;
-    std::vector<double> vKDERT_w;
     std::vector<double> vKDEWT;
-    std::vector<double> vKDEWT_w;
 
     //EVENT LOOP
     int nEvents = t->GetEntries();
@@ -258,25 +256,23 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         if(osMuonTag == 1){
             mva_RT->Fill(mvaValue, evtWeight);
             vKDERT.push_back(mvaValue);
-            vKDERT_w.push_back(evtWeight);
+            if(evtWeight==2.) vKDERT.push_back(mvaValue);
         }
         if(osMuonTag == 0){
             mva_WT->Fill(mvaValue, evtWeight);
             vKDEWT.push_back(mvaValue);
-            vKDEWT_w.push_back(evtWeight);
+            if(evtWeight==2.) vKDEWT.push_back(mvaValue);
         }
     }
 
     int nRT = mva_RT->Integral();
     int nWT = mva_WT->Integral();
 
-    auto itMaxRT = max_element(std::begin(vKDERT), std::end(vKDERT));
-    auto itMinRT = min_element(std::begin(vKDERT), std::end(vKDERT));
-    auto itMaxWT = max_element(std::begin(vKDEWT), std::end(vKDEWT));
-    auto itMinWT = min_element(std::begin(vKDEWT), std::end(vKDEWT));
+    sort(vKDERT.begin(), vKDERT.end());
+    sort(vKDEWT.begin(), vKDEWT.end());
 
-    float xMin = *itMinWT < *itMinRT ? *itMinWT : *itMinRT;
-    float xMax = *itMaxRT > *itMaxWT ? *itMaxRT : *itMaxWT;
+    float xMin = min(vKDERT[0], vKDEWT[0]);
+    float xMax = max(vKDERT[vKDERT.size()-1], vKDEWT[vKDEWT.size()-1]);
 
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
@@ -295,9 +291,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         cout<<"xMin "<<xMin<<endl;
         cout<<"xMax "<<xMax<<endl;    
 
-        TKDE *kdeRT = new TKDE(nRT, &vKDERT[0],&vKDERT_w[0],xMin,xMax,
+        TKDE *kdeRT = new TKDE(vKDERT.size(), &vKDERT[0], xMin, xMax,
             "KernelType:Epanechnikov;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", rhoRT);
-        TKDE *kdeWT = new TKDE(nWT, &vKDEWT[0],&vKDEWT_w[0],xMin,xMax,
+        TKDE *kdeWT = new TKDE(vKDEWT.size(), &vKDEWT[0], xMin, xMax,
             "KernelType:Epanechnikov;Iteration:Adaptive;Mirror:noMirror;Binning:RelaxedBinning", rhoWT);
 
         TF1 *pdfRT = new TF1("pdfRT",kdeRT,xMin,xMax,0);
@@ -322,11 +318,40 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         auto fW = new TF1("fW",
             [&](double *x, double *p)
             { 
-                double yRT = nRT*(*kdeRT)(x[0]); 
-                double yWT = nWT*(*kdeWT)(x[0]); 
+                double yRT = nRT*kdeRT->GetValue(x[0]); 
+                double yWT = nWT*kdeWT->GetValue(x[0]); 
                 return yWT/(yWT+yRT);
             }, 
             xMin,xMax,0);
+
+        auto fWtest = new TF1("fWtest",
+            [&](double *x, double *p)
+            {
+                double yRT = nRT*kdeRT->GetValue(x[0]); 
+                double yWT = nWT*kdeWT->GetValue(x[0]);
+                if(x[0]<=xMin){
+                    yRT = nRT*kdeRT->GetValue(xMin);
+                    yWT = nWT*kdeWT->GetValue(xMin);
+                }
+                if(x[0]>=xMax){
+                    yRT = nRT*kdeRT->GetValue(xMax);
+                    yWT = nWT*kdeWT->GetValue(xMax);
+                }
+
+                return yWT/(yWT+yRT);
+            }, 
+            0.,1.,0);
+
+        TCanvas *c15 = new TCanvas();
+        fW->SetMarkerStyle(20);
+        fW->SetMarkerSize(1.);
+        fW->SetNpx(25);
+        fW->DrawClone("P");
+        TCanvas *c16 = new TCanvas();    
+        fWtest->SetMarkerStyle(20);
+        fWtest->SetMarkerSize(1.);
+        fWtest->SetNpx(100);
+        fWtest->DrawClone("P");
 
         //----------CATEGORIES----------
     /*
@@ -513,7 +538,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         gr->GetXaxis()->SetTitle("MVA output");
         gr->Draw("APE");
         fW->SetLineColor(kGreen);
-        fW->DrawClone("P SAME");
+        fW->DrawClone("SAME P");
 
         c10->Print("kde.png");
         c2->Print("mva.png");
