@@ -180,7 +180,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     t->SetBranchAddress("muoCharge", &osMuonCharge);
     t->SetBranchAddress("ssbLund", &ssbLund);
 
-    int nBinsMva = 1000;
+    int nBinsMva = 5000;
     TH1F *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );
     TH1F *mva_RT = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
     TH1F *mva_WT = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
@@ -373,14 +373,13 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         t->Project("mB_WT", "mBMass", cutWT );
     */
 
-        nCat = 25;
+        nCat = 50;
         int nTotTagged = nRT + nWT;
         int catSize = nTotTagged / nCat;
         cout<<endl<<"nTotTagged "<<nTotTagged<<endl<<"catSize "<<catSize<<endl<<endl;
 
         int cTot = 0;
-        int hTot = 0;
-        int cCenter = 0;
+        float cCenter = 0;
         int lastCat = 0;
         
         float   *catEdge    = new float[nCat];
@@ -402,17 +401,14 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
 
         int cCat = 0;
-        int counter = 0;
         for(int i = 1; i<=nBinsMva; ++i){
             cCenter += mva->GetBinCenter(i)*mva->GetBinContent(i);
             catRT[cCat] += mva_RT->GetBinContent(i);
             catWT[cCat] += mva_WT->GetBinContent(i);
-            cTot = cTot + mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
-            hTot = hTot  + mva->GetBinContent(i);
+            cTot        += mva->GetBinContent(i);
             //cout<<"bin "<<i<<", "<<mva_RT->GetBinContent(i) + mva_WT->GetBinContent(i);
             //cout<<" ("<<cTot<<")"<<" ["<<hTot<<"]"<<endl;
             if(cTot >= catSize){
-                counter += cTot;
                 catEdge[cCat] = mva->GetXaxis()->GetBinLowEdge(i+1);
                 catCenter[cCat] = (float)cCenter/(float)cTot;
                 cout<<" -----> cat "<<cCat<<", "<<cTot<<" ["<<catEdge[cCat]<<"]"<<endl;
@@ -421,7 +417,6 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
                 cCat++;
             }
             if(i==nBinsMva){
-                counter += cTot;
                 catCenter[cCat] = (float)cCenter/(float)cTot;
                 catEdge[cCat] = xMax;
                 lastCat = cCat;
@@ -430,7 +425,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
 
         cout<<endl;
-        cout<<counter<<endl;
+
         nCat = lastCat + 1;
         float totEff = 0;
         float totW = 0;
@@ -527,7 +522,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
         TCanvas *c12 = new TCanvas();
         fW->SetMarkerStyle(20);
-        fW->SetMarkerSize(1.);
+        fW->SetMarkerSize(0.2);
         fW->SetNpx(nCat);
         fW->DrawClone("P");
 
