@@ -200,7 +200,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     //EVENT LOOP
     cout<<"----- BEGIN LOOP"<<endl;
-    int nEvents = 2000000;//t->GetEntries();
+    int nEvents = t->GetEntries();
     for(int i=0; i<nEvents; ++i){
         //if(i!=15285) continue;
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
@@ -300,13 +300,37 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         fCheck->SetParameter(0, avgW);
         fCheck->SetParameter(1, 1);
 
-        TCanvas *c30 = new TCanvas();
-        grW->SetMarkerStyle(20);
-        grW->SetMarkerSize(1.);
         grW->Fit("fCheck");
-        grW->Draw("APE");
+        TF1 *myfunc = grW->GetFunction("fCheck");
 
-        c30->Print("check.png");
+        vector<float> wResY;
+        vector<float> wResEY;
+
+        for (int j=0;j<wX.size();++j) { 
+            wResY.push_back((wY[j] - myfunc->Eval(wX[j]))/weY[j]);
+            wResEY.push_back(1.);
+        } 
+
+        TGraph *grWres = new TGraphErrors(wX.size(),&wX[0],&wResY[0],0,&wResEY[0]);
+
+        TCanvas *c30 = new TCanvas();
+        c30->Divide(1,2);
+        c30->cd(1);
+        grW->SetMarkerStyle(20);
+        grW->SetMarkerSize(.5);
+        grW->Draw("APE");
+        c30->cd(2);
+        grWres->SetMarkerStyle(20);
+        grWres->SetMarkerSize(.5);
+        grWres->Draw("APE");
+
+        //c30->Print("check.jpg");
+
+        float p0 = myfunc->GetParameter(0);
+        float p1 = myfunc->GetParameter(0);
+
+        cout<<"p0 "<<myfunc->GetParameter(0)<<" ["<<abs(myfunc->GetParameter(0)-avgW)/myfunc->GetParError(0)<<"]"<<endl;
+        cout<<"p1 "<<myfunc->GetParameter(1)<<" ["<<abs(myfunc->GetParameter(1)-1.)/myfunc->GetParError(1)<<"]"<<endl;
 
     }
 
@@ -582,9 +606,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
         c3->Update();
 
-        c10->Print("kde.png");
-        c2->Print("mva.png");
-        c3->Print("perEventW.png");
+        c10->Print("kde.jpg");
+        c2->Print("mva.jpg");
+        c3->Print("perEventW.jpg");
     }
 
     cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEvents<<"%"<<endl;
