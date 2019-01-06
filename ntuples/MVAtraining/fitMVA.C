@@ -233,7 +233,6 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     cout<<"----- BEGIN LOOP"<<endl;
     int nEvents = t->GetEntries();
     for(int i=0; i<nEvents; ++i){
-        //if(i!=15285) continue;
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
         if(!osMuon) continue;
@@ -358,7 +357,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         grWres->SetMarkerSize(.5);
         grWres->Draw("APE");
 
-        //c30->Print("check.jpg");
+        c30->Print("validation.pdf");
 
         float p0 = myfunc->GetParameter(0);
         float p1 = myfunc->GetParameter(0);
@@ -639,9 +638,9 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
         c3->Update();
 
-        //c10->Print("kde.jpg");
-        //c2->Print("mva.jpg");
-        //c3->Print("perEventW.jpg");
+        c10->Print("kdeDistributions.pdf");
+        c2->Print("mvaDistributions.pdf");
+        c3->Print("perEventW.pdf");
     }
 
     cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEvents<<"%"<<endl;
