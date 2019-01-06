@@ -1,27 +1,34 @@
+#include <vector>
+#include <string>
+#include <math.h>
+#include <iostream>
+#include <sstream>
+
+#include "TMVA/Reader.h"
+#include "TMVA/Tools.h"
+#include "TMVA/PyMethodBase.h"
+#include "TH1.h"
+#include "TF1.h"
+#include "TString.h"
+#include "TMath.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
+#include "TCanvas.h"
+#include "TTree.h"
+#include "TFile.h"
+#include "TKDE.h"
+#include "TROOT.h"
+
+using namespace std;
+
 TString year_;
 TString process_;
 TString dir_ = "./";
 TString suffix_;
 float min_ = 5.1;
 float max_ = 5.5;
-int nBins_=50;
-
-float *catEdgeL;
-float *catEdgeR;
-float *catMistag;
-int nCat;
-TString bestFit;
-TF1 *perEvtW;
-float totPCut = 0.;
-float totPCat = 0.;
-float totPFunc = 0.;
-float avgW;
-float *wCalc;
-float *wRT;
-float *wWT;
-int nBinCheck = 20;
-float step = 0.5/nBinCheck;
-TH1 *hCheck;
+int nBins_ = 50;
 
 void setGvars(TString filename)
 {
@@ -32,29 +39,46 @@ void setGvars(TString filename)
     dir_ = dirPath;
 }
 
-void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
+int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             , TString method = "DNNOsMuon2017test231"
             , TString mode = "CREATE")
 {
-    gROOT->Reset();
+    cout<<"----- BEGIN CODE"<<endl;
+
     gErrorIgnoreLevel = kWarning;
     if(mode != "CREATE" && mode != "USE" && mode != "CHECK"){
         cout<<"WRONG MODE"<<endl;
-        return false;
+        return 0;
     }
 
     TFile *f = new TFile(file);
     TTree *t = (TTree*)f ->Get("PDsecondTree");
-
+    cout<<"----- FILE OPEN"<<endl;
     setGvars(file);
 
+//----------DEFINE STUFF----------
+    float *catEdgeL;
+    float *catEdgeR;
+    float *catMistag;
+    int nCat;
+    TString bestFit;
+    TF1 *perEvtW;
+    float totPCut = 0.;
+    float totPCat = 0.;
+    float totPFunc = 0.;
+    float avgW;
+    float *wCalc;
+    float *wRT;
+    float *wWT;
+    int nBinCheck = 20;
+    float step;
+    TH1 *hCheck;
 
-
-//----------READ FILE----------
+//----------READ INPUT FILE----------
     if(mode=="USE" || mode=="CHECK")
     {
         std::ifstream ifs("OSMuonTaggerDefinition.txt",std::ifstream::in);
-        if(!ifs.is_open()) return;
+        if(!ifs.is_open()) return 0;
 
         ifs >> method;
 
@@ -69,6 +93,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             ifs >> catEdgeR[i];
             ifs >> catMistag[i];
         }
+        cout<<"Input categories "<<"L R W"<<endl;
         for(int i=0; i<nCat; ++i)
             cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<endl;
 
@@ -77,23 +102,27 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         int nPar;
         ifs >> avgW;
         ifs >> nPar;
+        cout<<endl<<"Input function"<<endl;
+        cout<<bestFit<<endl;
+        cout<<"avgW = "<<avgW<<endl;
         perEvtW = new TF1("perEvtW", bestFit, 0., 1.);
         for(int i=0;i<nPar;++i){
             float par;
             ifs >> par;
             perEvtW->SetParameter(i, par);
+            cout<<"p"<<i<<" = "<<par<<endl;
         }
 
-        cout<<bestFit<<endl;
-        cout<<avgW<<endl;
-        perEvtW->GetFormula()->Print();
 
         ifs.close();
 
         if(mode == "CHECK"){
+
             wCalc = new float[nBinCheck];
             wRT   = new float[nBinCheck];
             wWT   = new float[nBinCheck];
+
+            step = 0.5/nBinCheck;
 
             for(int j=0;j<nBinCheck;++j){
                 wCalc[j] = (float)j*step + step/2;
@@ -103,6 +132,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
     }
 
+
+    cout<<"----- BEGIN MVA SETUP"<<endl;
     
 //----------COMPUTE MVA----------
     TMVA::Reader reader("!Color:Silent");
@@ -200,7 +231,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     //EVENT LOOP
     cout<<"----- BEGIN LOOP"<<endl;
-    int nEvents = t->GetEntries();
+    int nEvents = 1000000;//t->GetEntries();
     for(int i=0; i<nEvents; ++i){
         //if(i!=15285) continue;
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
@@ -291,7 +322,8 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             wY.push_back(wWT[j]/(wWT[j]+wRT[j]));
             weY.push_back(sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) ));
 
-            cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", wRT "<<wRT[j]<<", wWT "<<wWT[j]<<", wMeas "<<wWT[j]/(wWT[j]+wRT[j])<<endl;
+            cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", wRT "<<wRT[j]<<", wWT "<<wWT[j]<<", wMeas "<<wWT[j]/(wWT[j]+wRT[j]);
+            cout<<" +- "<<sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) )<<endl;
         }
 
         TGraph *grW = new TGraphErrors(wX.size(),&wX[0],&wY[0],0,&weY[0]);
@@ -306,7 +338,7 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         vector<float> wResY;
         vector<float> wResEY;
 
-        for (int j=0;j<wX.size();++j) { 
+        for (unsigned int j=0;j<wX.size();++j) { 
             wResY.push_back((wY[j] - myfunc->Eval(wX[j]))/weY[j]);
             wResEY.push_back(1.);
         } 
@@ -324,13 +356,12 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         grWres->SetMarkerSize(.5);
         grWres->Draw("APE");
 
-        //c30->Print("check.jpg");
+        c30->Print("check.jpg");
 
         float p0 = myfunc->GetParameter(0);
         float p1 = myfunc->GetParameter(0);
 
-        cout<<"p0 "<<myfunc->GetParameter(0)<<" ["<<abs(myfunc->GetParameter(0)-avgW)/myfunc->GetParError(0)<<"]"<<endl;
-        cout<<"p1 "<<myfunc->GetParameter(1)<<" ["<<abs(myfunc->GetParameter(1)-1.)/myfunc->GetParError(1)<<"]"<<endl;
+        cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl;
 
     }
 
@@ -606,9 +637,9 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
         c3->Update();
 
-        c10->Print("kde.jpg");
-        c2->Print("mva.jpg");
-        c3->Print("perEventW.jpg");
+        //c10->Print("kde.jpg");
+        //c2->Print("mva.jpg");
+        //c3->Print("perEventW.jpg");
     }
 
     cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEvents<<"%"<<endl;
@@ -618,4 +649,12 @@ void fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     cout<<endl<<"Cat P = "<<100.*totPCat<<"%"<<endl;
     cout<<"Func P = "<<100.*totPFunc<<"%"<<endl;
 
+    return 0;
+
+}
+
+int main( int argc, char** argv )
+{
+    cout<<"----- BEGIN MAIN"<<endl;
+    return fitMVA(argv[0],argv[1],argv[2]); 
 }
