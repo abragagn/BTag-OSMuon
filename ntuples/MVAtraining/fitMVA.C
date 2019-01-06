@@ -231,7 +231,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     //EVENT LOOP
     cout<<"----- BEGIN LOOP"<<endl;
-    int nEvents = 1000000;//t->GetEntries();
+    int nEvents = t->GetEntries();
     for(int i=0; i<nEvents; ++i){
         //if(i!=15285) continue;
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
