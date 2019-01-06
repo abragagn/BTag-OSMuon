@@ -320,7 +320,9 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
             wX.push_back(wCalc[j]);
             wY.push_back(wWT[j]/(wWT[j]+wRT[j]));
-            weY.push_back(sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) ));
+            if(wWT[j] == 0) weY.push_back(1/wRT[j]);
+            else if(wRT[j] == 0) weY.push_back(1/wWT[j]);
+            else weY.push_back(sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) ));
 
             cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", wRT "<<wRT[j]<<", wWT "<<wWT[j]<<", wMeas "<<wWT[j]/(wWT[j]+wRT[j]);
             cout<<" +- "<<sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) )<<endl;
@@ -356,7 +358,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         grWres->SetMarkerSize(.5);
         grWres->Draw("APE");
 
-        c30->Print("check.jpg");
+        //c30->Print("check.jpg");
 
         float p0 = myfunc->GetParameter(0);
         float p1 = myfunc->GetParameter(0);
