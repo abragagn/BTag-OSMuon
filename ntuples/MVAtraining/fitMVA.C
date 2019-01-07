@@ -290,7 +290,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             evtWkde = g_pdfW->Eval(mvaValue);
             evtWkde_ext = g_pdfW_extended->Eval(mvaValue);
 
-            evtW = evtWkde_ext;
+            evtW = evtWFunc;
 
             //if(evtWCat>0.5){ evtWCat = 1 - evtWCat; evtTagCat *= -1;}
             totPCat += 1./(float)nEvents*pow(1.-2.*evtWCat, 2)*evtWeight;
@@ -381,12 +381,12 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         y3_->Draw("SAME");
         y3__->Draw("SAME");
 
-        c30->Print("validation.pdf");
+        c30->Print("validationBu_Fit.pdf");
 
         float p0 = myfunc->GetParameter(0);
         float p1 = myfunc->GetParameter(0);
 
-        cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl;
+        cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)*avgW<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl;
 
     }
 
