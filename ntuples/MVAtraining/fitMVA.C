@@ -46,7 +46,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     cout<<"----- BEGIN CODE"<<endl;
 
     gErrorIgnoreLevel = kWarning;
-    if(mode != "CREATE" && mode != "USE" && mode != "CHECK"){
+    if(mode != "CREATE" && mode != "USE"){
         cout<<"WRONG MODE"<<endl;
         return 0;
     }
@@ -70,14 +70,17 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     float *wCalc;
     float *wRT;
     float *wWT;
-    int nBinCheck = 20;
-    float step;
+    int nBinCheck = 30;
+    float pass;
     TH1 *hCheck;
 
+    TGraph *g_pdfW;
+    TGraph *g_pdfW_extended;
+
 //----------READ INPUT FILE----------
-    if(mode=="USE" || mode=="CHECK")
+    if(mode=="USE")
     {
-        std::ifstream ifs("OSMuonTaggerDefinition.txt",std::ifstream::in);
+        std::ifstream ifs("OSMuonTaggerCategories.txt",std::ifstream::in);
         if(!ifs.is_open()) return 0;
 
         ifs >> method;
@@ -113,22 +116,25 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             cout<<"p"<<i<<" = "<<par<<endl;
         }
 
-
         ifs.close();
 
-        if(mode == "CHECK"){
+        TFile *f2 = new TFile("OSMuonTaggerKDE.root");
+        f2->cd();
+        g_pdfW = (TGraph*)f2 ->Get("pdfW");
+        g_pdfW_extended = (TGraph*)f2 ->Get("pdfW_extended");
+        f2->Close();
+        f->cd();
 
-            wCalc = new float[nBinCheck];
-            wRT   = new float[nBinCheck];
-            wWT   = new float[nBinCheck];
+        wCalc = new float[nBinCheck];
+        wRT   = new float[nBinCheck];
+        wWT   = new float[nBinCheck];
 
-            step = 0.5/nBinCheck;
+        pass = 1./nBinCheck;
 
-            for(int j=0;j<nBinCheck;++j){
-                wCalc[j] = (float)j*step + step/2;
-                wRT[j] = 0;
-                wWT[j] = 0;
-            }
+        for(int j=0;j<nBinCheck;++j){
+            wCalc[j] = (float)j*pass + pass/2;
+            wRT[j] = 0;
+            wWT[j] = 0;
         }
     }
 
@@ -253,10 +259,13 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
         float evtWCat = -1.;
         float evtWFunc = -1.;
+        float evtWkde = -1.;
+        float evtWkde_ext = -1.;
+        float evtW = -1.;;
         int evtTagCat = -1*osMuonCharge;
         int evtTagFunc = -1*osMuonCharge;
 
-        if(mode=="USE" || mode=="CHECK"){
+        if(mode=="USE"){
 
             if( mvaValue < catEdgeL[0] ){
                 cout<<"Undercat "<<mvaValue<<" at "<<i<<endl;
@@ -278,22 +287,24 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
                 evtWFunc = perEvtW->Eval(mvaValue);
             }
-            if(evtWCat>0.5){ evtWCat = 1 - evtWCat; evtTagCat *= -1;}
+            evtWkde = g_pdfW->Eval(mvaValue);
+            evtWkde_ext = g_pdfW_extended->Eval(mvaValue);
+
+            evtW = evtWkde_ext;
+
+            //if(evtWCat>0.5){ evtWCat = 1 - evtWCat; evtTagCat *= -1;}
             totPCat += 1./(float)nEvents*pow(1.-2.*evtWCat, 2)*evtWeight;
 
-            if(evtWFunc>0.5){ evtTagFunc *= -1; evtWFunc = 1 - evtWFunc; }
-            totPFunc += 1./(float)nEvents*pow(1.-2.*evtWFunc ,2)*evtWeight;
+            //if(evtW>0.5){ evtTagFunc *= -1; evtW = 1 - evtW; }
+            totPFunc += 1./(float)nEvents*pow(1.-2.*evtW ,2)*evtWeight;
 
-            if(mode == "CHECK"){
-                for(int j=0;j<nBinCheck;++j){
-                    if( (evtWFunc>=(float)j*step) && (evtWFunc<((float)j*step+step)) ){
-                        if(TMath::Sign(1, ssbLund) == evtTagFunc) wRT[j] += evtWeight;
-                        if(TMath::Sign(1, ssbLund) != evtTagFunc) wWT[j] += evtWeight;
-                        break;
-                    }
+            for(int j=0;j<nBinCheck;++j){
+                if( (evtW>=(float)j*pass) && (evtW<((float)j*pass+pass)) ){
+                    if(TMath::Sign(1, ssbLund) == evtTagFunc) wRT[j] += evtWeight;
+                    if(TMath::Sign(1, ssbLund) != evtTagFunc) wWT[j] += evtWeight;
+                    break;
                 }
             }
-
         }
 
         mva->Fill(mvaValue, evtWeight);
@@ -308,8 +319,10 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             if(evtWeight==2.) vKDEWT.push_back(mvaValue);
         }
     }
+    cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
-    if(mode == "CHECK"){
+    if(mode == "USE"){
+
         vector<float> wX;
         vector<float> wY;
         vector<float> weY;
@@ -328,7 +341,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         }
 
         TGraph *grW = new TGraphErrors(wX.size(),&wX[0],&wY[0],0,&weY[0]);
-        TF1 *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,.5);
+        TF1 *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,1.);
         fCheck->FixParameter(2, avgW);
         fCheck->SetParameter(0, avgW);
         fCheck->SetParameter(1, 1);
@@ -351,11 +364,22 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         c30->cd(1);
         grW->SetMarkerStyle(20);
         grW->SetMarkerSize(.5);
+        grW->SetMaximum(1.);
+        grW->SetMinimum(0);
         grW->Draw("APE");
         c30->cd(2);
         grWres->SetMarkerStyle(20);
         grWres->SetMarkerSize(.5);
         grWres->Draw("APE");
+        TF1 *y0_ = new TF1("","0.",0.,1.);
+        TF1 *y3_ = new TF1("","3.",0.,1.);
+        TF1 *y3__ = new TF1("","-3.",0.,1.);
+        y0_->SetLineColor(kBlack);
+        y3_->SetLineColor(kRed);
+        y3__->SetLineColor(kRed);
+        y0_->Draw("SAME");
+        y3_->Draw("SAME");
+        y3__->Draw("SAME");
 
         c30->Print("validation.pdf");
 
@@ -366,25 +390,14 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     }
 
-
     int nRT = mva_RT->Integral();
     int nWT = mva_WT->Integral();
-/*
-    float tailFraction = 0.001;
-    sort(vKDERT.begin(), vKDERT.end());
-    sort(vKDEWT.begin(), vKDEWT.end());
-    for(int i=0;i<int(nRT*tailFraction/2);++i) vKDERT.pop_back(); 
-    for(int i=0;i<int(nWT*tailFraction/2);++i) vKDEWT.pop_back();
-    vKDERT.erase(vKDERT.begin(), vKDERT.begin()+(int)(nRT*tailFraction/2));
-    vKDEWT.erase(vKDEWT.begin(), vKDEWT.begin()+(int)(nWT*tailFraction/2));
-*/
+
     sort(vKDERT.begin(), vKDERT.end());
     sort(vKDEWT.begin(), vKDEWT.end());
 
     float xMin = min(vKDERT[0], vKDEWT[0]);
     float xMax = max(vKDERT[vKDERT.size()-1], vKDEWT[vKDEWT.size()-1]);
-
-    cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
 //----------CREATE----------
     if(mode == "CREATE")
@@ -392,25 +405,24 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         //----------KDE----------
         float rho = .5;
 
-        //mva_RT->GetXaxis()->SetRangeUser(xMin, xMax);
-        //mva_WT->GetXaxis()->SetRangeUser(xMin, xMax);
-
         cout<<"nRT "<<nRT<<endl;
         cout<<"nWT "<<nWT<<endl;
         cout<<"xMin "<<xMin<<endl;
         cout<<"xMax "<<xMax<<endl;
         cout<<"rho "<<rho<<endl;
 
-        TKDE *kdeRT = new TKDE(vKDERT.size(), &vKDERT[0], 0., 1., "", rho);
-        TKDE *kdeWT = new TKDE(vKDEWT.size(), &vKDEWT[0], 0., 1., "", rho);
+        TKDE *kdeRT = new TKDE(vKDERT.size(), &vKDERT[0], 0., 1., 
+            "KernelType:Gaussian;Iteration:Adaptive;Mirror:NoMirror;Binning:RelaxedBinning", rho);
+        TKDE *kdeWT = new TKDE(vKDEWT.size(), &vKDEWT[0], 0., 1., 
+            "KernelType:Gaussian;Iteration:Adaptive;Mirror:NoMirror;Binning:RelaxedBinning", rho);
 
         TF1 *pdfRT = new TF1("pdfRT",kdeRT,0.,1.,0);
-        TF1 *pdfWT = new TF1("pdfWT",kdeWT,0.,1.,0);
+        TF1 *pdpdfWT = new TF1("pdpdfWT",kdeWT,0.,1.,0);
 
         pdfRT->SetLineColor(kBlue);
         pdfRT->SetNpx(2000);
-        pdfWT->SetLineColor(kRed);
-        pdfWT->SetNpx(2000);
+        pdpdfWT->SetLineColor(kRed);
+        pdpdfWT->SetNpx(2000);
 
         TCanvas *c10 = new TCanvas();
         c10->Divide(2,2);
@@ -421,9 +433,9 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         c10->cd(3);
         pdfRT->Draw();
         c10->cd(4);
-        pdfWT->Draw();
+        pdpdfWT->Draw();
 
-        auto fW = new TF1("fW",
+        auto pdfW = new TF1("pdfW",
             [&](double *x, double *p)
             { 
                 double yRT = vKDERT.size()*kdeRT->GetValue(x[0]); 
@@ -432,27 +444,32 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             }, 
             0.,1.,0);
 
-        auto fW_extended = new TF1("fW_extended",
+        auto pdfW_extended = new TF1("pdfW_extended",
             [&](double *x, double *p)
             {
-                if(x[0]<fW->GetMaximumX())
-                    return fW->GetMaximum();
-                if(x[0]>=fW->GetMinimumX())
-                    return fW->GetMinimum();
-                return fW->Eval(x[0]);
+                if(x[0]<pdfW->GetMaximumX())
+                    return pdfW->GetMaximum();
+                if(x[0]>=pdfW->GetMinimumX())
+                    return pdfW->GetMinimum();
+                return pdfW->Eval(x[0]);
             }, 
             0.,1.,0);
 
+        pdfW_extended->SetNpx(100);
+        pdfW->SetNpx(100);
+        TGraph *out_pdfW = new TGraph(pdfW);
+        TGraph *out_pdfW_extended = new TGraph(pdfW_extended);
+
         TCanvas *c16 = new TCanvas();    
-        fW_extended->SetMarkerStyle(20);
-        fW_extended->SetLineColor(kBlue);
-        fW_extended->SetMarkerSize(.5);
-        fW_extended->SetNpx(40);
-        fW_extended->DrawClone("PL");
-        fW->SetMarkerStyle(20);
-        fW->SetMarkerSize(1.);
-        fW->SetNpx(50);
-        fW->DrawClone("P SAME");
+        pdfW_extended->SetMarkerStyle(20);
+        pdfW_extended->SetLineColor(kBlue);
+        pdfW_extended->SetMarkerSize(.5);
+        pdfW_extended->SetNpx(50);
+        pdfW_extended->DrawClone("PL");
+        pdfW->SetMarkerStyle(20);
+        pdfW->SetMarkerSize(1.);
+        pdfW->SetNpx(50);
+        pdfW->DrawClone("P SAME");
 
         //----------CATEGORIES----------
     /*
@@ -588,7 +605,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
 //----------OUTPUT STREAM----------
         ofstream ofs;
-        ofs.open ("OSMuonTaggerDefinition.txt");
+        ofs.open ("OSMuonTaggerCategories.txt");
         //CAT
         ofs<<method<<endl;
         ofs<<nCat<<endl;
@@ -607,11 +624,12 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             ofs<<fitErf->GetParameter(j)<<endl;
         ofs.close();
 
-/*        TFile *fo = new TFile("OSMuonTaggerDefinition.root");
-        fo-cd();
-        kdeRT->Write();
+        TFile *fo = new TFile("OSMuonTaggerKDE.root", "RECREATE");
+        fo->cd();
+        out_pdfW->Write();
+        out_pdfW_extended->Write();
         fo->Close();
-        f->cd()*/
+        f->cd();
 //----------PRINT----------
 
 
@@ -625,7 +643,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         mva_WT->SetLineColor(kRed);
 
         TCanvas *c3 = new TCanvas();
-        fW_extended->DrawClone("");
+        pdfW_extended->DrawClone("");
         gr->SetMarkerStyle(20);
         gr->SetMarkerSize(.5);
         gr->SetTitle("per-event mistag");
@@ -633,8 +651,8 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         gr->SetMinimum(0.);
         gr->Draw("PE SAME");
         grAsy->Draw("E SAME");
-        fW->SetLineColor(kGreen);
-        fW->DrawClone("P SAME");
+        pdfW->SetLineColor(kGreen);
+        pdfW->DrawClone("P SAME");
 
         c3->Update();
 
