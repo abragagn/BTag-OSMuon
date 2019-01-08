@@ -32,7 +32,7 @@ float min_ = 5.1;
 float max_ = 5.5;
 int nBins_ = 50;
 
-float CountEventsWithFit(TH1 *hist);
+float CountEventsWithFit(TH1 *hist, TString name);
 
 void setGvars(TString filename)
 {
@@ -42,9 +42,10 @@ void setGvars(TString filename)
     if(filename.Contains("Bu")) process_ = "BuJPsiK";
 }
 
-int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
+int fitMVA(TString file = "../ntuBsMC2017.root"
             , TString method = "DNNOsMuon2017test231"
-            , TString mode = "CREATE")
+            , TString mode = "CREATE"
+            , int nEvents = -1)
 {
     cout<<"----- BEGIN CODE"<<endl;
 
@@ -70,13 +71,12 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
     float totPCat = 0.;
     float totPFunc = 0.;
     float avgW;
-    float *wCalc;
-    float *wRT;
-    float *wWT;
-    int nBinCheck = 20;
-    float pass;
+    int nBinCheck = 10;
+    auto *wCalc = new float[nBinCheck];;
+    auto *hMassRT = new TH1F*[nBinCheck];
+    auto *hMassWT = new TH1F*[nBinCheck];
+    float pass = 1./nBinCheck;;
     TH1 *hCheck;
-
     TGraph *g_pdfW;
     TGraph *g_pdfW_extended;
 
@@ -128,16 +128,10 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         f2->Close();
         f->cd();
 
-        wCalc = new float[nBinCheck];
-        wRT   = new float[nBinCheck];
-        wWT   = new float[nBinCheck];
-
-        pass = 1./nBinCheck;
-
         for(int j=0;j<nBinCheck;++j){
             wCalc[j] = (float)j*pass + pass/2;
-            wRT[j] = 0;
-            wWT[j] = 0;
+            hMassRT[j] = new TH1F(TString::Format("mb%i", j),"", nBins_, min_, max_);
+            hMassWT[j] = new TH1F(TString::Format("mb%i", j),"", nBins_, min_, max_);
         }
     }
 
@@ -220,13 +214,14 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     //TAG VARS
     int osMuon, osMuonTag, osMuonCharge, ssbLund;
-    float evtWeight;
+    float evtWeight, ssbMass;
 
     t->SetBranchAddress("osMuon", &osMuon);
     t->SetBranchAddress("osMuonTag", &osMuonTag);
     t->SetBranchAddress("evtWeight", &evtWeight);
     t->SetBranchAddress("muoCharge", &osMuonCharge);
     t->SetBranchAddress("ssbLund", &ssbLund);
+    t->SetBranchAddress("ssbMass", &ssbMass);
 
     int nBinsMva = 1000;
     auto *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );
@@ -238,7 +233,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
     //EVENT LOOP
     cout<<"----- BEGIN LOOP"<<endl;
-    int nEvents = t->GetEntries();
+    if(nEvents == -1) nEvents = t->GetEntries();
     for(int i=0; i<nEvents; ++i){
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
@@ -301,8 +296,8 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
             for(int j=0;j<nBinCheck;++j){
                 if( (evtW>=(float)j*pass) && (evtW<((float)j*pass+pass)) ){
-                    if(TMath::Sign(1, ssbLund) == evtTagFunc) wRT[j] += evtWeight;
-                    if(TMath::Sign(1, ssbLund) != evtTagFunc) wWT[j] += evtWeight;
+                    if(TMath::Sign(1, ssbLund) == evtTagFunc) hMassRT[j]->Fill(ssbMass, evtWeight);
+                    if(TMath::Sign(1, ssbLund) != evtTagFunc) hMassWT[j]->Fill(ssbMass, evtWeight);
                     break;
                 }
             }
@@ -320,6 +315,17 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
             if(evtWeight==2.) vKDEWT.push_back(mvaValue);
         }
     }
+
+
+    int nRT = mva_RT->Integral();
+    int nWT = mva_WT->Integral();
+
+    sort(vKDERT.begin(), vKDERT.end());
+    sort(vKDEWT.begin(), vKDEWT.end());
+
+    float xMin = min(vKDERT[0], vKDEWT[0]);
+    float xMax = max(vKDERT[vKDERT.size()-1], vKDEWT[vKDEWT.size()-1]);
+
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
 
     if(mode == "USE"){
@@ -329,16 +335,21 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         vector<float> weY;
 
         for(int j=0;j<nBinCheck;++j){
-            if(wRT[j] == 0 && wWT[j] == 0 ) continue;
+            float nMassRT = hMassRT[j]->Integral();
+            float nMassWT = hMassWT[j]->Integral();
+            if(nMassRT == 0 && nMassWT == 0 ) continue;
 
-            wX.push_back(wCalc[j]);
-            wY.push_back(wWT[j]/(wWT[j]+wRT[j]));
-            if(wWT[j] == 0) weY.push_back(1/wRT[j]);
-            else if(wRT[j] == 0) weY.push_back(1/wWT[j]);
-            else weY.push_back(sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) ));
+            if(nMassRT != 0) nMassRT = CountEventsWithFit(hMassRT[j], TString::Format("hMassRT%i", j));
+            if(nMassWT != 0) nMassWT = CountEventsWithFit(hMassWT[j], TString::Format("hMassWT%i", j));
 
-            cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", wRT "<<wRT[j]<<", wWT "<<wWT[j]<<", wMeas "<<wWT[j]/(wWT[j]+wRT[j]);
-            cout<<" +- "<<sqrt((wWT[j] * wRT[j])/pow((wWT[j] + wRT[j]),3) )<<endl;
+            wX.push_back( wCalc[j] );
+            wY.push_back( nMassWT/(nMassWT+nMassRT) );
+            if(nMassWT == 0) weY.push_back(1/nMassRT);
+            else if(nMassRT == 0) weY.push_back(1/nMassWT);
+            else weY.push_back(sqrt((nMassWT * nMassRT)/pow((nMassWT + nMassRT),3) ));
+
+            cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", nRT "<<hMassRT[j]<<", nWT "<<nMassWT<<", wMeas "<<nMassWT/(nMassWT+nMassRT);
+            cout<<" +- "<<sqrt((nMassWT * nMassRT)/pow((nMassRT),3) )<<endl;
         }
 
         auto *grW = new TGraphErrors(wX.size(),&wX[0],&wY[0],0,&weY[0]);
@@ -390,15 +401,6 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)*avgW<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl;
 
     }
-
-    int nRT = mva_RT->Integral();
-    int nWT = mva_WT->Integral();
-
-    sort(vKDERT.begin(), vKDERT.end());
-    sort(vKDEWT.begin(), vKDEWT.end());
-
-    float xMin = min(vKDERT[0], vKDEWT[0]);
-    float xMax = max(vKDERT[vKDERT.size()-1], vKDEWT[vKDEWT.size()-1]);
 
 //----------CREATE----------
     if(mode == "CREATE")
@@ -584,25 +586,17 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
         TGraphAsymmErrors *grAsy = new TGraphAsymmErrors(nCat,catCenter,catW,vexl,vexh,vey,vey);
         auto *gr = new TGraph(nCat,catCenter,catW);
 
-        auto *fitErf = new TF1("fitErf","[0]+[1]*(1-TMath::Erf([2]+[3]*x))",0.,1.);
+        bestFit = "[0]+[1]*(1-TMath::Erf([2]+[3]*x))";
+        auto *fitErf = new TF1("fitErf", bestFit, 0., 1.);
         fitErf->SetParameter(0, catW[nCat-1]);
         fitErf->SetParameter(1, (catW[0]-catW[nCat-1])/2);
         fitErf->SetParLimits(0, 0., 0.3);
         fitErf->SetParLimits(1, 0.5/2, 1./2);
 
-        auto *fitErfLim = new TF1("fitErfLim","[0]+[1]*(1-TMath::Erf([2]+[3]*x))",0.,1.);
-        fitErfLim->SetParameter(0, catW[nCat-1]);
-        fitErfLim->SetParameter(1, (catW[0]-catW[nCat-1])/2);
-        fitErfLim->SetParLimits(0, 0., catW[nCat-1]);
-        fitErfLim->SetParLimits(1, 0., (catW[0]-catW[nCat-1])/2);
-
-        auto *fitTanH = new TF1("fitTanH","[0]+[1]*(1-TMath::TanH([2]+[3]*x))",0.,1.);
-        auto *fitATan = new TF1("fitATan","[0]+[1]*(1-TMath::ATan([2]+[3]*x))",0.,1.);
+        auto *fitTanH = new TF1("fitTanH", "[0]+[1]*(1-TMath::TanH([2]+[3]*x))", 0., 1.);
+        auto *fitATan = new TF1("fitATan", "[0]+[1]*(1-TMath::ATan([2]+[3]*x))", 0., 1.);
 
         gr->Fit("fitErf","MELR");
-        //gr->Fit("fitErfLim","MELR+");
-
-        bestFit = "[0]+[1]*(1-TMath::Erf([2]+[3]*x))";
 
 //----------OUTPUT STREAM----------
         ofstream ofs;
@@ -672,7 +666,7 @@ int fitMVA(TString file = "../BsMC/ntuBsMC2017.root"
 
 }
 
-float CountEventsWithFit(TH1 *hist){
+float CountEventsWithFit(TH1 *hist, TString name = "hist"){
 
     ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls( 10000 );
 
@@ -717,7 +711,14 @@ float CountEventsWithFit(TH1 *hist){
 
     func->SetNpx(2000);
 
+    auto c5 = new TCanvas();
+    hist->SetMarkerStyle(20);
+    hist->SetMarkerSize(.75);
     hist->Fit("func","MRLQ");
+    hist->Draw("PE");
+    hist->SetMinimum(0.1);
+
+    c5->Print(name + ".pdf");
 
     TF1 *fit = hist->GetFunction("func");
 
