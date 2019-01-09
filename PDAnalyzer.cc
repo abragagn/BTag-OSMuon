@@ -198,8 +198,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         if(process=="BsJPsiPhi"){
             if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
             if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v)) jpsitktk =  true;
-            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
-            if( !(jpsimu || jpsitktk || jpsitk) ) return false;
+            if( !(jpsimu || jpsitktk) ) return false;
         }else if(process=="BuJPsiK"){
             if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
             if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
@@ -210,15 +209,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
-    int iSsB = GetCandidate(process);
+    int iSsB = GetTightCandidate(process);
     if(iSsB<0) return false;
-
-    bool isTight = false;
-    int iSsBtight = GetTightCandidate(process, -0.1, -0.1);
-    if(iSsBtight >= 0){
-        isTight = true;
-        iSsB = iSsBtight;
-    }
 
     int iJPsi = (subVtxFromSV(iSsB)).at(0);
     vector <int> tkJpsi = tracksFromSV(iJPsi);
@@ -283,7 +275,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->ssbEta) = tB.Eta();
     (tWriter->ssbPhi) = tB.Phi();
     (tWriter->ssbMass) = svtMass->at(iSsB);
-    (tWriter->ssbIsTight) = isTight;
 
     (tWriter->ssbLxy) = GetCt2D(tB, iSsB) / (MassBs/tB.Pt());
     (tWriter->ssbCt2D) = GetCt2D(tB, iSsB);

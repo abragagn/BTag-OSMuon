@@ -10,7 +10,7 @@ void evaluateP(TString file = "./BsMC/ntuBsMC2016.root",  TString cutEvt = "", T
 {
     gErrorIgnoreLevel = kWarning;
     TFile *f = new TFile(file);
-    TTree *t = (TTree*)f ->Get("PDsecondTree");
+    TTree *t = (TTree*)f->Get("PDsecondTree");
     if(file.Contains("16")) year = "2016";
     if(file.Contains("17")) year = "2017";
     if(file.Contains("Bs")){

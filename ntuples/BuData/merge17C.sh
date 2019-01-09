@@ -1,10 +1,10 @@
 #!/bin/bash
 i=0;
-max=100;
+max=80;
 echo $'#!/bin/sh' > park.sh
-echo -n "hadd ntuBuData2017.root" >> park.sh
+echo -n "hadd ntuBuData2017C.root" >> park.sh
 while [ "$i" -le "$max" ]; do
-  echo -n " s17_$i/ntu$i" >> park.sh
+  echo -n " s17C_$i/ntu$i" >> park.sh
   echo -n ".root" >> park.sh
   i=`expr "$i" + 1`;
 done

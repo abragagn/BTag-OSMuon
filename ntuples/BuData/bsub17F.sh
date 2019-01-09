@@ -1,10 +1,10 @@
 #!/bin/bash
 i=0;
-max=100;
+max=75;
 n=1000000;
 while [ "$i" -le "$max" ]; do
-  mkdir "s17_$i";
-  cd "s17_$i";
+  mkdir "s17F_$i";
+  cd "s17F_$i";
   skip=$(python -c "print 0+$n*$i");
   echo $'#!/bin/sh' > script.sh
   echo $'#BSUB -o test.log' >> script.sh
