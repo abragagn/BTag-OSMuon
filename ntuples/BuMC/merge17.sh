@@ -11,4 +11,4 @@ done
 echo " " >> park.sh
 bash park.sh;
 rm park.sh;
-
+mv ntuBuMC2017.root ../
