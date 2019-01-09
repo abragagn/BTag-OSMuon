@@ -198,19 +198,26 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         if(process=="BsJPsiPhi"){
             if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
             if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v)) jpsitktk =  true;
-            if( !(jpsimu || jpsitktk) ) return false;
+            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
+            //if( !(jpsimu || jpsitktk) ) return false;
         }else if(process=="BuJPsiK"){
             if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
             if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
-            if( !(jpsimu || jpsitk) ) return false;
+            //if( !(jpsimu || jpsitk) ) return false;
         }
     }
 
-
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
-    int iSsB = GetTightCandidate(process);
+    int iSsB = GetCandidate(process);
     if(iSsB<0) return false;
+
+    bool isTight = false;
+    int iSsBtight = GetTightCandidate(process);
+    if(iSsBtight>=0){
+        isTight = true;
+        iSsB = iSsBtight;
+    }
 
     int iJPsi = (subVtxFromSV(iSsB)).at(0);
     vector <int> tkJpsi = tracksFromSV(iJPsi);
@@ -234,8 +241,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             unsigned int Code = abs(genId->at(i));
             if( Code == 511 || Code == 521 || Code == 531 || Code == 541 || Code == 5122 ) ListLongLivedB.push_back(i);
         }
-
-        if(ListLongLivedB.size()!=2) return false; //only evts with two b hadrons            
 
         genBindex = GetClosestGenLongLivedB( tB.Eta(), tB.Phi(), tB.Pt(), &ListLongLivedB);
         if(genBindex<0) return false;
@@ -275,6 +280,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->ssbEta) = tB.Eta();
     (tWriter->ssbPhi) = tB.Phi();
     (tWriter->ssbMass) = svtMass->at(iSsB);
+    (tWriter->ssbIsTight) = isTight;
 
     (tWriter->ssbLxy) = GetCt2D(tB, iSsB) / (MassBs/tB.Pt());
     (tWriter->ssbCt2D) = GetCt2D(tB, iSsB);
@@ -294,6 +300,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->hltJpsiTrk) = jpsitk;
     
     (tWriter->evtWeight) = evtWeight;
+    (tWriter->evtNb) = ListLongLivedB.size();
 
     hmass_ssB->Fill(svtMass->at(iSsB), evtWeight);
     
@@ -327,8 +334,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->osMuonTag) = 0 ;
     }
 
-
-
     //COMPLEX TAGGING VARIABLES
     //INDICES
     int iMuon = bestMuIndex;
@@ -360,7 +365,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     float muoJetSize = -1;
     float muoJetQ = -1;
     float muoJetPt = -1;
-
 
     if(iJet>=0){
         vector <int> jet_pfcs = pfCandFromJet( iJet );
@@ -453,7 +457,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     tCone -= tMu;
     muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
     muoConeQ = qCone;
-
 
     //HOW MANY MUONS
     int nMuonsSel = 0;
@@ -566,7 +569,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 }
 
-
 void PDAnalyzer::endJob() {
 
 // additional features
@@ -603,8 +605,6 @@ void PDAnalyzer::save() {
 
     return;
 }
-
-
 
 // ======MY FUNCTIONS===============================================================================
 int PDAnalyzer::GetBestSvtFromTrack(int trkIndex )

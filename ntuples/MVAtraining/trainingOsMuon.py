@@ -21,7 +21,6 @@ from keras.callbacks import ModelCheckpoint
 def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue = 0.5):
 
     model = Sequential()
-
     model.add(Dense(layerSize, activation='relu', kernel_initializer='normal', input_dim=inputDim))
     if dropValue != 0:
         model.add(Dropout(dropValue))
@@ -33,11 +32,9 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 
     model.add(Dense(2, activation='softmax'))
 
-    # Set loss and optimizer
     sgd = SGD(lr=0.05, decay=1e-5, momentum=0.9, nesterov=True)
     model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
 
-    # Store model to file
     model.save(modelName)
     model.summary()
 
@@ -48,12 +45,12 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
-DNNFLAG= False
+DNNFLAG= True
 BDTFLAG = True
 
 
 # Load data
-file = '../BsMC/ntuBsMC2017.root'
+file = '../ntuBsMC2017.root'
 #file ='ntu.root'
 
 data = TFile.Open(file)
@@ -61,6 +58,7 @@ data = TFile.Open(file)
 tree = data.Get('PDsecondTree')
 
 cut = 'osMuon==1'
+#cut += '(hltJpsiMu || (hltJpsiTrkTrk && ssbCt2DSigmaUnit>3.))'
 cut += '&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)'
 
 cutSgn = cut + '&&osMuonTag==1'
