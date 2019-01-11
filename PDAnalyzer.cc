@@ -86,6 +86,8 @@ void PDAnalyzer::beginJob() {
     inizializeMuonMvaReader( muonMvaMethod );
     //inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
 
+    setOsMuonCuts(muonIdWpBarrel, muonIdWpEndcap, 1., )
+
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
 
@@ -445,21 +447,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
     muoConeQ = qCone;
 
-    //HOW MANY MUONS
-    int nMuonsSel = 0;
-    for(int iMuon = 0; iMuon < nMuons; ++iMuon ){
-        int itkmu = muonTrack( iMuon, PDEnumString::muInner );
-        if(itkmu<0) continue;
-        if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
-        if(muoPt->at( iMuon )<2.) continue;
-        if(fabs(muoEta->at( iMuon ))>2.4) continue;
-        if(!isMvaMuon(iMuon, muonIdWpBarrel, muonIdWpEndcap)) continue;
-        if(fabs(dZ(itkmu, iSsPV)) > 1.) continue;
-        if(deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon))<0.4) continue;
-        ++nMuonsSel;
-    }
-
-
     bool debugJet = false;
 
     if(debugJet && muoAncestor>=0 && iJet>=0){
@@ -513,7 +500,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->muoJetDFprob) = muoJetDFprob;
     (tWriter->muoJetSize) = muoJetSize;
 
-    (tWriter->muoHowMany) = nMuonsSel;
+    (tWriter->muoHowMany) = getNosMuons();
 
     (tWriter->muoSvtPt)  = muoSvtPt;
     (tWriter->muoSvtPtRel) = muoSvtPtRel;

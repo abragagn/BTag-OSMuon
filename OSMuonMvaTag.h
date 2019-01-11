@@ -15,8 +15,8 @@
 #include "TMVA/Reader.h"
 #include "TMVA/PyMethodBase.h"
 
-class OSMuonMvaTag :    public virtual PDAnalyzerUtil
-,                       public virtual AlbertoUtil
+class OSMuonMvaTag : public virtual PDAnalyzerUtil
+,                    public virtual AlbertoUtil
 {
 
 public:
@@ -29,9 +29,10 @@ public:
     float   getOsMuonTagMistagProb();
 
     void    setSsForTag(int iB, int iPV) { ssIndex_ = iB; pvIndex_ = iPV;}
-    void    setOsMuonCuts(float wpB, float wpE, float dzCut, float PFIsoCut);
+    void    setOsMuonCuts(float wpB, float wpE, float dzCut);
     void    inizializeOSMuonMvaTagReader(TString weightsFile, TString path);
 
+    int     getNosMuons(){return nMuonsSel_;}
 private:    
     TString methodNameFromWeightName();
     void    computeVariables();
@@ -50,6 +51,8 @@ private:
     float wpE_;
     float dzCut_;
     float PFIsoCut_;
+
+    int nMuonsSel_;
 
     //MVA Variables
 
