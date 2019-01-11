@@ -35,18 +35,12 @@ PDAnalyzer::PDAnalyzer() {
     setUserParameter( "verbose", "f" );
 
     setUserParameter( "process", "BsJPsiPhi" );
-    setUserParameter( "useTightSel", "f" );
-
-    setUserParameter( "minPtMuon", "2." );
-    setUserParameter( "maxEtaMuon", "2.4" );
+    setUserParameter( "useHLT", "false" );
 
     setUserParameter( "outputFile", "ntu.root" );
 
     setUserParameter( "muonIdWpBarrel", "0.00" ); 
     setUserParameter( "muonIdWpEndcap", "0.00" ); 
-
-    setUserParameter( "muoDzCut", "1." ); 
-    setUserParameter( "muoPFIsoCut", "5" ); 
 
     setUserParameter( "muonMvaMethod",      "BDTMuonID2017woIPwIso" ); 
     setUserParameter( "osMuonTagMvaMethod", "BDTOsMuon2016Jet" ); 
@@ -75,16 +69,10 @@ void PDAnalyzer::beginJob() {
     getUserParameter( "process", process );
     getUserParameter( "useHLT", useHLT );
 
-    getUserParameter( "minPtMuon", minPtMuon );
-    getUserParameter( "maxEtaMuon", maxEtaMuon );
-
     getUserParameter( "outputFile", outputFile );
 
     getUserParameter( "muonIdWpBarrel", muonIdWpBarrel ); 
     getUserParameter( "muonIdWpEndcap", muonIdWpEndcap ); 
-
-    getUserParameter( "muoDzCut", muoDzCut ); 
-    getUserParameter( "muoPFIsoCut", muoPFIsoCut ); 
 
     getUserParameter( "muonMvaMethod", muonMvaMethod );
     getUserParameter( "osMuonTagMvaMethod", osMuonTagMvaMethod );
@@ -194,18 +182,17 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     bool jpsitktk = false;
     bool jpsitk = false;
 
-    if(useHLT){
-        if(process=="BsJPsiPhi"){
-            if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
-            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v)) jpsitktk =  true;
-            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
-            //if( !(jpsimu || jpsitktk) ) return false;
-        }else if(process=="BuJPsiK"){
-            if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
-            if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
-            //if( !(jpsimu || jpsitk) ) return false;
-        }
-    }
+    if(hlt(PDEnumString::HLT_Dimuon0_Jpsi3p5_Muon2_v)||hlt(PDEnumString::HLT_Dimuon0_Jpsi_Muon_v)) jpsimu = true;
+    if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v)) jpsitktk =  true;
+    if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
+
+    if( jpsimu ) SetJpsiMuCut();
+    if( !jpsimu ) SetJpsiTrktrkCut();
+
+
+    if(useHLT && process=="BsJPsiPhi" && !(jpsimu || jpsitktk)) return false;
+    if(useHLT && process=="BuJPsiK" && !(jpsimu || jpsitk)) return false;
+
 
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
@@ -436,7 +423,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
         if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
         if(pfpfc < 0.2) continue;
-        if(abs(etapfc) > 2.5) continue;        
+        if(fabs(etapfc) > 2.5) continue;        
         TLorentzVector a;
         a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
         tCone += a;
@@ -464,11 +451,11 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         int itkmu = muonTrack( iMuon, PDEnumString::muInner );
         if(itkmu<0) continue;
         if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
-        if(muoPt->at( iMuon )<minPtMuon) continue;
-        if(abs(muoEta->at( iMuon ))>maxEtaMuon) continue;
+        if(muoPt->at( iMuon )<2.) continue;
+        if(fabs(muoEta->at( iMuon ))>2.4) continue;
         if(!isMvaMuon(iMuon, muonIdWpBarrel, muonIdWpEndcap)) continue;
-        if(abs(dZ(itkmu, iSsPV)) > muoDzCut) continue;
-        if(GetMuoPFiso(iMuon) > muoPFIsoCut)  continue;
+        if(fabs(dZ(itkmu, iSsPV)) > 1.) continue;
+        if(deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon))<0.4) continue;
         ++nMuonsSel;
     }
 
@@ -495,7 +482,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         cout<<endl;
 
         hTest->Fill(GetSignedDxy(iMuon, iSsPV));
-        hTest2->Fill( abs(dXY( itkmu, pvtX->at(iSsPV), pvtY->at(iSsPV) )) * dSign(itkmu, jetPx->at( iJet ), jetPy->at( iJet ), pvtX->at(iSsPV), pvtY->at(iSsPV)) );
+        hTest2->Fill( fabs(dXY( itkmu, pvtX->at(iSsPV), pvtY->at(iSsPV) )) * dSign(itkmu, jetPx->at( iJet ), jetPy->at( iJet ), pvtX->at(iSsPV), pvtY->at(iSsPV)) );
     }
 
     //------------------------------------------------FILLING------------------------------------------------
@@ -634,7 +621,7 @@ float PDAnalyzer::GetSvtCharge(int iSvt, float kappa)
        float pt = trkPt->at(it);
 
        if(pt<0.2) continue;
-       if(abs(trkEta->at(it))>2.5) continue;
+       if(fabs(trkEta->at(it))>2.5) continue;
 
        QSvt += trkCharge->at(it) * pow(pt, kappa);
        ptSvt += pow(pt, kappa);

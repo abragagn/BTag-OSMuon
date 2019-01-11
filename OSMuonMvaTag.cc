@@ -45,9 +45,9 @@ void OSMuonMvaTag::inizializeOSMuonMvaTagReader(
     setWeights(methodName, path);
 
     osMuonTagReader_.AddVariable( "muoPt", &muoPt_);
-    osMuonTagReader_.AddVariable( "abs_muoEta := abs(muoEta)", &absmuoEta_);
+    osMuonTagReader_.AddVariable( "abs_muoEta := fabs(muoEta)", &absmuoEta_);
     osMuonTagReader_.AddVariable( "muoDxy", &muoDxy_);
-    osMuonTagReader_.AddVariable( "abs_muoDz := abs(muoDz)", &absmuoDz_);
+    osMuonTagReader_.AddVariable( "abs_muoDz := fabs(muoDz)", &absmuoDz_);
     osMuonTagReader_.AddVariable( "muoSoftMvaValue", &muoSoftMvaValue_);
     osMuonTagReader_.AddVariable( "muoDrB", &muoDrB_);
     osMuonTagReader_.AddVariable( "muoPFIso", &muoPFIso_);
@@ -78,7 +78,7 @@ TString OSMuonMvaTag::methodNameFromWeightName()
 
 int OSMuonMvaTag::getOsMuon()
 {
-    if(ssIndex_ < 0){ cout<<"SS NOT INITIALIZED"<<endl; return 0; }
+    if(ssIndex_ < 0){ cout<<"SS NOT INITIALIZED"<<endl; return -2; }
 
     int iB = ssIndex_;
     int iPV = pvIndex_;
@@ -99,12 +99,13 @@ int OSMuonMvaTag::getOsMuon()
         if(std::find(tkSsB.begin(), tkSsB.end(), itkmu) != tkSsB.end()) continue;
 
         if(muoPt->at( iMuon ) < 2.) continue;
-        if(abs(muoEta->at( iMuon )) > 2.4) continue;
+        if(fabs(muoEta->at( iMuon )) > 2.4) continue;
        
         if(!isMvaMuon(iMuon, wpB_, wpE_)) continue;
 
-        if(abs(dZ(itkmu, iPV)) > dzCut_) continue;
+        if(fabs(dZ(itkmu, iPV)) > dzCut_) continue;
         if(GetMuoPFiso(iMuon) > PFIsoCut_)  continue;
+        if(deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon)) < 0.4) continue;
 
         if(muoPt->at( iMuon ) > bestMuPt){
             bestMuPt = muoPt->at( iMuon );
@@ -183,7 +184,7 @@ void OSMuonMvaTag::computeVariables()
         if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
         if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
         if(pfpfc < 0.2) continue;
-        if(abs(etapfc) > 2.5) continue;
+        if(fabs(etapfc) > 2.5) continue;
 
         TLorentzVector a;
         a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
@@ -205,9 +206,9 @@ void OSMuonMvaTag::computeVariables()
 
     DUMMY_ = -1;
     muoPt_ = muoPt->at(iMuon);
-    absmuoEta_ = abs(muoEta->at(iMuon));
+    absmuoEta_ = fabs(muoEta->at(iMuon));
     muoDxy_= GetSignedDxy(iMuon, iPV);
-    absmuoDz_= abs(dZ(itkmu, iPV));
+    absmuoDz_= fabs(dZ(itkmu, iPV));
     muoSoftMvaValue_= computeMuonMva(iMuon);
     muoDrB_= deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
     muoPFIso_= GetMuoPFiso(iMuon);

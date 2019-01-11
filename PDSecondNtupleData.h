@@ -97,7 +97,7 @@ void initTree() {
     setBranch( "muoHowMany", &muoHowMany, "muoHowMany/I", &b_muoHowMany );
 
     setBranch( "evtNumber", &evtNumber, "evtNumber/I", &b_evtNumber );
-    setBranch( "evtWeight", &evtWeight, "evtWeight/F", &b_evtWeight );
+    setBranch( "evtWeight", &evtWeight, "evtWeight/I", &b_evtWeight );
     setBranch( "evtNb", &evtNb, "evtNb/I", &b_evtNb );
 
     setBranch( "hltJpsiMu", &hltJpsiMu , "hltJpsiMu/I" , &b_hltJpsiMu );
@@ -105,9 +105,9 @@ void initTree() {
     setBranch( "hltJpsiTrk", &hltJpsiTrk , "hltJpsiTrk/I" , &b_hltJpsiTrk );
 }
 
-float ssbPt, ssbEta, ssbPhi, ssbMass, jpsiMass, ssbDxy, ssbExy, ssbDz, ssbEz, evtWeight;
+float ssbPt, ssbEta, ssbPhi, ssbMass, jpsiMass, ssbDxy, ssbExy, ssbDz, ssbEz;
 float ssbLxy, ssbCt2D, ssbCt2DErr, ssbCt2DSigmaUnit, ssbCt3D, ssbCt3DErr, ssbCt3DSigmaUnit;
-int ssbSVT, ssbPVT, ssbLund, evtNumber, hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk, ssbIsTight, evtNb;
+int ssbSVT, ssbPVT, ssbLund, evtNumber, hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk, ssbIsTight, evtNb, evtWeight;
 
 TBranch *b_ssbPt, *b_ssbEta, *b_ssbPhi, *b_ssbMass, *b_jpsiMass, *b_ssbDxy, *b_ssbExy, *b_ssbDz, *b_ssbEz;
 TBranch *b_ssbLxy, *b_ssbCt2D, *b_ssbCt2DErr, *b_ssbCt2DSigmaUnit, *b_ssbCt3D, *b_ssbCt3DErr, *b_ssbCt3DSigmaUnit;

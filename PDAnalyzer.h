@@ -64,20 +64,16 @@ class PDAnalyzer: public virtual PDAnalyzerUtil
 
     double ptCut; //needed for paolo's code for unknow reasons
 
-    bool verbose;
+    //PARAMETERS
+    bool verbose, useHLT;
     TString outputFile;
-    float minPtMuon, maxEtaMuon;
-
-    bool useHLT;
-    bool useTightSel;
-
-    float muonIdWpBarrel, muonIdWpEndcap, muoDzCut, muoDxyCut, muoPFIsoCut;
-
-    int nselMu;
-
+    float muonIdWpBarrel, muonIdWpEndcap;
     TString process;
     TString muonMvaMethod;
     TString osMuonTagMvaMethod;
+
+    //OTHER VARIABLES
+    int nselMu;
 
     // HISTOGRAMS
 

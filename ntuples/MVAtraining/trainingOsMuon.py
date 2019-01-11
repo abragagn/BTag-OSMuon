@@ -88,9 +88,9 @@ dataloader = TMVA.DataLoader('dataset')
 
 varList = [
     ('muoPt', 'F')
-    ,('abs_muoEta := abs(muoEta)', 'F')
+    ,('abs_muoEta := fabs(muoEta)', 'F')
     ,('muoDxy', 'F')
-    ,('abs_muoDz := abs(muoDz)', 'F')
+    ,('abs_muoDz := fabs(muoDz)', 'F')
     ,('muoSoftMvaValue', 'F')
     ,('muoDrB', 'F')
     ,('muoPFIso', 'F')
@@ -105,9 +105,9 @@ varList = [
 
 varListTest2 = [
     ('muoPt', 'F')
-    ,('abs_muoEta := abs(muoEta)', 'F')
+    ,('abs_muoEta := fabs(muoEta)', 'F')
     ,('muoDxy', 'F')
-    ,('abs_muoDz := abs(muoDz)', 'F')
+    ,('abs_muoDz := fabs(muoDz)', 'F')
     ,('muoSoftMvaValue', 'F')
     ,('muoDrB', 'F')
     ,('muoPFIso', 'F')
@@ -121,9 +121,9 @@ varListTest2 = [
 
 varListTest3 = [
     ('muoPt', 'F')
-    ,('abs_muoEta := abs(muoEta)', 'F')
+    ,('abs_muoEta := fabs(muoEta)', 'F')
     ,('muoDxy', 'F')
-    ,('abs_muoDz := abs(muoDz)', 'F')
+    ,('abs_muoDz := fabs(muoDz)', 'F')
     ,('muoSoftMvaValue', 'F')
     ,('muoDrB', 'F')
     ,('muoPFIso', 'F')
