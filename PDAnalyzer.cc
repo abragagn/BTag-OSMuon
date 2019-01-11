@@ -83,10 +83,10 @@ void PDAnalyzer::beginJob() {
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
+    setOsMuonCuts(muonIdWpBarrel, muonIdWpEndcap, 1. );
+
     inizializeMuonMvaReader( muonMvaMethod );
     //inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
-
-    setOsMuonCuts(muonIdWpBarrel, muonIdWpEndcap, 1., )
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);

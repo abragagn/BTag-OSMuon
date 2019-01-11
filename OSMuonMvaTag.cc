@@ -6,10 +6,10 @@ OSMuonMvaTag::OSMuonMvaTag():
 ,               ssIndex_(-1)
 ,               osMuonIndex_(-1)
 ,               osMuonTrackIndex_(-1)
-,               nMuonsSel_(0)
 ,               wpB_(0.)
 ,               wpE_(0.)
 ,               dzCut_(1.)
+,               nMuonsSel_(0)
 {}
 
 OSMuonMvaTag::~OSMuonMvaTag() {}
