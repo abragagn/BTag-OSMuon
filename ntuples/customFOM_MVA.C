@@ -5,10 +5,10 @@ float calculateFOM( TString eta = "B", TString addCut = "", bool verbose = false
 	gStyle->SetOptFit(0); 	gStyle->SetStatBorderSize(0);
 	gStyle->SetStatX(.49); 	gStyle->SetStatY(.89);
 
-	TFile *f = new TFile("./BsMC/ntuBsMC2017.root");
+	TFile *f = new TFile("./ntuBsMC2017.root");
 	TTree *t = (TTree*)f ->Get("PDsecondTree");
 
-	int nBins=50;
+	int nBins=100;
 	float min=0.86;
 	float max=0.92;
 
@@ -17,8 +17,8 @@ float calculateFOM( TString eta = "B", TString addCut = "", bool verbose = false
 	TH1F *Bkg = new TH1F( "Bkg", "Bkg", nBins, min, max );
 
 	TCut generalCuts;
-	if(eta == "B") generalCuts = "abs(muoEta)<1.2&&osMuon==1";
-	if(eta == "E") generalCuts = "abs(muoEta)>=1.2&&osMuon==1";
+	if(eta == "B") generalCuts = "fabs(muoEta)<1.2&&osMuon==1";
+	if(eta == "E") generalCuts = "fabs(muoEta)>=1.2&&osMuon==1";
 	generalCuts += addCut;
 	TCut sgnDef = generalCuts + "osMuonTag==1";
 	TCut bkgDef = generalCuts + "osMuonTag==0";

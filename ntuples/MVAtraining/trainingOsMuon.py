@@ -46,7 +46,7 @@ TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
 DNNFLAG= True
-BDTFLAG = True
+BDTFLAG = False
 
 
 # Load data
@@ -57,8 +57,8 @@ data = TFile.Open(file)
 
 tree = data.Get('PDsecondTree')
 
-cut = 'osMuon==1'
-#cut += '(hltJpsiMu || (hltJpsiTrkTrk && ssbCt2DSigmaUnit>3.))'
+cut = 'osMuon==1&&hltJpsiMu==1'
+cut += '&&( (fabs(muoEta)<1.2 && muoSoftMvaValue>0.891) || (fabs(muoEta)>=1.2 && muoSoftMvaValue>0.8925) )'
 cut += '&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)'
 
 cutSgn = cut + '&&osMuonTag==1'
@@ -75,7 +75,7 @@ layerSize = int(layerSize)
 nLayers = int(nLayers)
 dropValue = float(dropValue)
 
-name = 'OsMuon2017test' + nTest
+name = 'OsMuonHLTJpsiMu_test' + nTest
 
 outputName = 'TMVA' + name + '.root'
 
@@ -87,39 +87,6 @@ factory = TMVA.Factory('TMVAClassification', output,
 dataloader = TMVA.DataLoader('dataset')
 
 varList = [
-    ('muoPt', 'F')
-    ,('abs_muoEta := fabs(muoEta)', 'F')
-    ,('muoDxy', 'F')
-    ,('abs_muoDz := fabs(muoDz)', 'F')
-    ,('muoSoftMvaValue', 'F')
-    ,('muoDrB', 'F')
-    ,('muoPFIso', 'F')
-    ,('muoJetConePt := muoJetPt != -1 ? muoJetPt : muoConePt', 'F')
-    ,('muoJetConePtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel', 'F')
-    ,('muoJetConeDr := muoJetPt != -1 ? muoJetDr : muoConeDr', 'F')
-    ,('muoJetConeEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio', 'F')
-    ,('muoJetDFprob', 'F')
-    ,('muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize', 'I')
-    ,('muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
-    ]
-
-varListTest2 = [
-    ('muoPt', 'F')
-    ,('abs_muoEta := fabs(muoEta)', 'F')
-    ,('muoDxy', 'F')
-    ,('abs_muoDz := fabs(muoDz)', 'F')
-    ,('muoSoftMvaValue', 'F')
-    ,('muoDrB', 'F')
-    ,('muoPFIso', 'F')
-    ,('muoJetPt := muoJetPt != -1 ? muoJetPt : muoConePt', 'F')
-    ,('muoJetPtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel', 'F')
-    ,('muoJetDr := muoJetPt != -1 ? muoJetDr : muoConeDr', 'F')
-    ,('muoJetEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio', 'F')
-    ,('muoJetSize := muoJetPt != -1 ? muoJetSize : muoConeSize', 'I')
-    ,('muoJetQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
-    ]
-
-varListTest3 = [
     ('muoPt', 'F')
     ,('abs_muoEta := fabs(muoEta)', 'F')
     ,('muoDxy', 'F')

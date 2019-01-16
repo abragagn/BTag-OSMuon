@@ -189,7 +189,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
 
     if( jpsimu ) SetJpsiMuCut();
-    if( !jpsimu ) SetJpsiTrktrkCut();
+    if( !jpsimu ) SetJpsiTrkTrkCut();
 
 
     if(useHLT && process=="BsJPsiPhi" && !(jpsimu || jpsitktk)) return false;
