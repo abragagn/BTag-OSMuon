@@ -63,6 +63,9 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
     TString HLT;
     if(method_.Contains("JpsiMu")) HLT = "HltJpsiMu";
     if(method_.Contains("JpsiTrkTrk")) HLT = "HltJpsiTrkTrk";
+    if(method_.Contains("JpsiTrk") && !method_.Contains("JpsiTrkTrk")) HLT = "HltJpsiTrk";
+
+    cout<<"HLT "<<HLT<<endl;
 
     int nCat;
     float *catEdgeL;
@@ -169,7 +172,9 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
 
     //TAGGING VARIABLES
     int osMuon, osMuonTag, osMuonCharge, ssbLund;
+    //EVENT VARIABLES
     float evtWeight, ssbMass;
+    int hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk;
 
     t->SetBranchAddress("muoPt", &muoPt);
     t->SetBranchAddress("muoEta", &muoEta);
@@ -197,6 +202,9 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
     t->SetBranchAddress("muoCharge", &osMuonCharge);
     t->SetBranchAddress("ssbLund", &ssbLund);
     t->SetBranchAddress("ssbMass", &ssbMass);
+    t->SetBranchAddress("hltJpsiMu", &hltJpsiMu);
+    t->SetBranchAddress("hltJpsiTrkTrk", &hltJpsiTrkTrk);
+    t->SetBranchAddress("hltJpsiTrk", &hltJpsiTrk);
 
 //----------COMPUTE MVA----------
     cout<<"----- BEGIN MVA SETUP"<<endl;
@@ -234,9 +242,17 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
     cout<<"----- BEGIN LOOP"<<endl;
 
     if(nEvents_ == -1) nEvents_ = t->GetEntries();
+    int nEventsRead = 0;
     for(int i=0; i<nEvents_; ++i){
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
+
+        //HLT
+        if(HLT == "HltJpsiMu" && !hltJpsiMu) continue;
+        if(HLT == "HltJpsiTrkTrk" && !hltJpsiTrkTrk) continue;
+        if(HLT == "HltJpsiTrk" && !hltJpsiTrk) continue;
+
+        nEventsRead++;
 
         //PRESELECTION
         if(!osMuon) continue;
@@ -283,8 +299,8 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
             evtWkde = g_pdfW->Eval(mvaValue);   //KDE
             evtWkde_ext = g_pdfW_extended->Eval(mvaValue);  //KDE EXTENDED
 
-            totPCat += 1./(float)nEvents_*pow(1.-2.*evtWcat, 2)*evtWeight;
-            totPKde += 1./(float)nEvents_*pow(1.-2.*evtWkde ,2)*evtWeight;
+            totPCat += pow(1.-2.*evtWcat, 2)*evtWeight;
+            totPKde += pow(1.-2.*evtWkde ,2)*evtWeight;
         }
 
         mva->Fill(mvaValue, evtWeight);
@@ -445,7 +461,7 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
 
         for(int i=0; i<nCat; ++i)
         {
-            catEff[i] = (float)(catWT[i] + catRT[i]) / (float)nEvents_;
+            catEff[i] = (float)(catWT[i] + catRT[i]) / (float)nEventsRead;
             totEff += catEff[i];
 
             catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
@@ -545,12 +561,12 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
         c3->Print("perEventW.pdf");
     }
 
-    cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEvents_<<"%"<<endl;
+    cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEventsRead<<"%"<<endl;
     cout<<"NoCat W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
-    cout<<"NoCat P = "<<100.*((float)(nRT+nWT)/nEvents_)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
+    cout<<"NoCat P = "<<100.*((float)(nRT+nWT)/nEventsRead)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
 
-    cout<<endl<<"Cat P = "<<100.*totPCat<<"%"<<endl;
-    cout<<"KDE P = "<<100.*totPKde<<"%"<<endl;
+    cout<<endl<<"Cat P = "<<100.*totPCat/(float)nEventsRead<<"%"<<endl;
+    cout<<"KDE P = "<<100.*totPKde/(float)nEventsRead<<"%"<<endl;
 
     f->Close();
     delete f;
