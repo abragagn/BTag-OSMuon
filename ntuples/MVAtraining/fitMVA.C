@@ -34,7 +34,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             , int nEvents_ = -1)
 {
     gErrorIgnoreLevel = kWarning;
-    TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/ntuples/MVAtraining/";
+    TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/ntuples/";
 
     cout<<"----- Parameters -----"<<endl;
     cout<<"file_ "<<file_<<endl;
@@ -229,7 +229,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     reader.AddVariable("muoJetDFprob", &muoJetDFprob);
     reader.AddVariable("muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize);
     reader.AddVariable("muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ);
-    reader.BookMVA( method_, path + "dataset/weights/TMVAClassification_" + method_ + ".weights.xml" );
+    reader.BookMVA( method_, path + "MVAtraining/dataset/weights/TMVAClassification_" + method_ + ".weights.xml" );
 
     int nBinsMva = 1000;
     auto *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );

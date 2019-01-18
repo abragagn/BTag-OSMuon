@@ -12,7 +12,7 @@ while [ "$i" -le "$max_i" ]; do
             cd "mva$i$j$k";
             echo $'#!/bin/sh' > script.sh
             echo $'#BSUB -o test.log' >> script.sh
-            echo "root -l -b -q '../fitMVA.C+(\"ntuBsMC2017.root\", \"DNNOsMuonHLTJpsiMu_test$i$j$k\", \"CREATE\", false, false, -1)'" >> script.sh
+            echo "root -l -b -q '../fitMVA.C(\"ntuBsMC2017.root\", \"DNNOsMuonHLTJpsiMu_test$i$j$k\", \"CREATE\", false, false, -1)'" >> script.sh
             echo "" >> script.sh
             bsub < script.sh;
             cd ..;
