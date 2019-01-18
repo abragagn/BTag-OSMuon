@@ -26,14 +26,15 @@
 
 using namespace std;
 
-int fitMVA(TString file_ = "../ntuBsMC2017.root"
-            , TString method_ = "OsMuonHLTJpsiMu_test241"
+void fitMVA(TString file_ = "ntuBsMC2017.root"
+            , TString method_ = "DNNOsMuonHLTJpsiMu_test241"
             , TString mode_ = "CREATE"
             , bool addMva_ = false
             , bool readMva_ = false
             , int nEvents_ = -1)
 {
     gErrorIgnoreLevel = kWarning;
+    TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/ntuples/MVAtraining/";
 
     cout<<"----- Parameters -----"<<endl;
     cout<<"file_ "<<file_<<endl;
@@ -45,17 +46,17 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
 
     if(mode_ != "CREATE" && mode_ != "USE"){
         cout<<"WRONG MODE_"<<endl;
-        return 0;
+        return;
     }
 
     if(addMva_ && readMva_){
         cout<<"CAN'T READ AND WRITE MVA AT THE SAME TIME"<<endl;
-        return 0;
+        return;
     }
 
     cout<<endl<<"----- BEGIN CODE"<<endl;
 
-    auto *f = new TFile(file_);
+    auto *f = new TFile(path + file_);
     auto *t = (TTree*)f->Get("PDsecondTree");
     cout<<"----- FILE READ"<<endl;
 
@@ -95,7 +96,7 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
         cout<<"----- USE METHOD MODE"<<endl;
 
         std::ifstream ifs("OSMuonTagger" + HLT + "Categories.txt", std::ifstream::in);
-        if(!ifs.is_open()) return 0;
+        if(!ifs.is_open()) return;
 
         ifs >> method_;
         //CAT
@@ -173,8 +174,8 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
     //TAGGING VARIABLES
     int osMuon, osMuonTag, osMuonCharge, ssbLund;
     //EVENT VARIABLES
-    float evtWeight, ssbMass;
-    int hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk;
+    float ssbMass;
+    int evtWeight, hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk;
 
     t->SetBranchAddress("muoPt", &muoPt);
     t->SetBranchAddress("muoEta", &muoEta);
@@ -215,9 +216,9 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
     TMVA::PyMethodBase::PyInitialize();
 
     reader.AddVariable("muoPt", &muoPt);
-    reader.AddVariable("abs_muoEta := abs(muoEta)", &absmuoEta);
+    reader.AddVariable("abs_muoEta := fabs(muoEta)", &absmuoEta);
     reader.AddVariable("muoDxy", &muoDxy);
-    reader.AddVariable("abs_muoDz := abs(muoDz)", &absmuoDz);
+    reader.AddVariable("abs_muoDz := fabs(muoDz)", &absmuoDz);
     reader.AddVariable("muoSoftMvaValue", &muoSoftMvaValue);
     reader.AddVariable("muoDrB", &muoDrB);
     reader.AddVariable("muoPFIso", &muoPFIso);
@@ -228,12 +229,13 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
     reader.AddVariable("muoJetDFprob", &muoJetDFprob);
     reader.AddVariable("muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize", &muoJetConeSize);
     reader.AddVariable("muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ", &muoJetConeQ);
-    reader.BookMVA( method_, "dataset/weights/TMVAClassification_" + method_ + ".weights.xml" );
+    reader.BookMVA( method_, path + "dataset/weights/TMVAClassification_" + method_ + ".weights.xml" );
 
     int nBinsMva = 1000;
     auto *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );
     auto *mva_RT = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
     auto *mva_WT = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
+    mva_WT->SetLineColor(kRed);
 
     vector<double> vKDERT;
     vector<double> vKDEWT;
@@ -264,8 +266,8 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
         bool infFlag = isinf(muoJetEnergyRatio) || isinf(muoConeEnergyRatio);
         if(nanFlag || infFlag) continue;
 
-        absmuoEta = abs(muoEta);
-        absmuoDz = abs(muoDz);
+        absmuoEta = fabs(muoEta);
+        absmuoDz = fabs(muoDz);
         muoJetConePt = muoJetPt != -1 ? muoJetPt : muoConePt;
         muoJetConePtRel = muoJetPt != -1 ? muoJetPtRel : muoConePtRel;
         muoJetConeDr = muoJetPt != -1 ? muoJetDr : muoConeDr;
@@ -353,9 +355,9 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
         auto *c10 = new TCanvas();
         c10->Divide(2,2);
         c10->cd(1);
-        mva_RT->Draw("hist");
+        mva_RT->DrawCopy("hist");
         c10->cd(2);
-        mva_WT->Draw("hist");
+        mva_WT->DrawCopy("hist");
         c10->cd(3);
         pdfRT->Draw();
         c10->cd(4);
@@ -538,9 +540,14 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
         cout<<"Cat P = "<<100*totP<<"%"<<endl;
 
         auto *c2 = new TCanvas();
-        mva_WT->Draw("hist");
-        mva_RT->Draw("hist same");
-        mva_WT->SetLineColor(kRed);
+        if(mva_WT->GetMaximum()>mva_RT->GetMaximum()){
+            mva_WT->DrawCopy("hist");
+            mva_RT->DrawCopy("hist same");            
+        }else{
+            mva_RT->DrawCopy("hist");
+            mva_WT->DrawCopy("hist same");                   
+        }
+
 
         auto *c3 = new TCanvas();
         pdfW_extended->DrawClone("");
@@ -570,6 +577,6 @@ int fitMVA(TString file_ = "../ntuBsMC2017.root"
 
     f->Close();
     delete f;
-    return 0;
+    return;
 
 }
