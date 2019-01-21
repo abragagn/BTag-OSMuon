@@ -30,7 +30,7 @@ TString process_;
 float min_, max_;
 int nBins_ = 50;
 
-float CountEventsWithFit(TH1 *hist, TString name);
+pair<float, float> CountEventsWithFit(TH1 *hist, TString name);
 
 void fitMVA(TString file_ = "ntuBsMC2017.root"
             , TString method_ = "DNNOsMuonHLTJpsiMu_test241"
@@ -402,14 +402,6 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
 //----------USE----------
     if(mode_ == "USE"){
-
-        for(int i=0; i<4; ++i){
-            for(int j=0;j<nBinCheck;++j){
-                cout<<i<<" "<<j<<" --- "<<hMassRT[i][j]->Integral()<<" "<<hMassWT[i][j]->Integral()<<endl;
-            }
-            cout<<endl;
-        }
-
         for(int i=0; i<4; ++i){
             cout<<"TYPE "<<i<<endl;
 
@@ -417,35 +409,56 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             vector<float> vY;
             vector<float> vEY;
 
-            int minEntries = 5;
-
-            int rebinThr = 1000;
-            if(file_.Contains("Data")) rebinThr = 5000;
+            int minEntries = 0;
+            int rebinThr = 5000;
 
             for(int j=0;j<nBinCheck;++j){
-                float nMassRT = hMassRT[i][j]->Integral();
-                float nMassWT = hMassWT[i][j]->Integral();
-                if(nMassRT < minEntries && nMassWT < minEntries ) continue;
+                pair<float, float> nMassRT; // .first = nEvt; .second = sigma(nEvt)
+                pair<float, float> nMassWT;
 
-                if(nMassRT<rebinThr) hMassRT[i][j]->Rebin();
-                if(nMassWT<rebinThr) hMassWT[i][j]->Rebin();
+                nMassRT.first = hMassRT[i][j]->Integral();
+                nMassWT.first = hMassWT[i][j]->Integral();
+                nMassRT.second = sqrt(hMassRT[i][j]->Integral());
+                nMassWT.second = sqrt(hMassWT[i][j]->Integral());
 
-                if(nMassRT >= minEntries) nMassRT = CountEventsWithFit(hMassRT[i][j], TString::Format("hMassRT%i%i", i, j));
-                if(nMassWT >= minEntries) nMassWT = CountEventsWithFit(hMassWT[i][j], TString::Format("hMassWT%i%i", i, j));
+                if(nMassRT.first <= minEntries && nMassWT.first <= minEntries ) continue;
+
+                if(process_.Contains("Data")){
+                    if(nMassRT.first<rebinThr) hMassRT[i][j]->Rebin();
+                    if(nMassWT.first<rebinThr) hMassWT[i][j]->Rebin();
+                    if(nMassRT.first >= minEntries) nMassRT = CountEventsWithFit(hMassRT[i][j], TString::Format("hMassRT%i%i", i, j));
+                    if(nMassWT.first >= minEntries) nMassWT = CountEventsWithFit(hMassWT[i][j], TString::Format("hMassWT%i%i", i, j));
+                }
 
                 vX.push_back( wCalc[j] );
-                vY.push_back( nMassWT/(nMassWT+nMassRT) );
-                if(nMassWT == 0) vEY.push_back(1/nMassRT);
-                else if(nMassRT == 0) vEY.push_back(1/nMassWT);
-                else vEY.push_back(sqrt((nMassWT * nMassRT)/pow((nMassWT + nMassRT),3) ));
+                vY.push_back( nMassWT.first/(nMassWT.first + nMassRT.first) ); // MEASURED MISTAG
 
-                cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", nRT "<<nMassRT<<", nWT "<<nMassWT<<", wMeas "<<nMassWT/(nMassWT+nMassRT);
-                cout<<" +- "<<sqrt((nMassWT * nMassRT)/pow((nMassRT),3) )<<endl;
+                float errMistag, errRT, errWT;
+
+                if(nMassWT.first == 0){
+                    errWT = 1;
+                    errRT = nMassRT.second;
+                }
+                else if(nMassRT.first == 0){
+                    errRT = 1;
+                    errWT = nMassWT.second;
+                }else{
+                    errRT = nMassRT.second;
+                    errWT = nMassWT.second;
+                }
+
+                errMistag =  sqrt(pow(nMassWT.first,2)*pow(errRT,2) + pow(nMassRT.first,2)*pow(errWT,2)  )/pow(nMassRT.first + nMassWT.first, 2);
+
+                vEY.push_back(errMistag);
+
+                cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", nRT "<<nMassRT.first<<"+-"<<errRT<<", nWT "<<nMassWT.first<<"+-"<<errWT<<", wMeas "<<nMassWT.first/(nMassWT.first + nMassRT.first);
+                cout<<" +- "<<errMistag<<endl;
             }
 
             auto *grW = new TGraphErrors(vX.size(),&vX[0],&vY[0],0,&vEY[0]);
-            auto *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,1.);
-            fCheck->FixParameter(2, avgW);
+            //auto *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,1.);
+            //fCheck->FixParameter(2, avgW);
+            auto *fCheck = new TF1("fCheck","[0]+[1]*x",0.,1.);
             fCheck->SetParameter(0, avgW);
             fCheck->SetParameter(1, 1);
 
@@ -513,7 +526,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             float p0 = myfunc->GetParameter(0);
             float p1 = myfunc->GetParameter(0);
 
-            cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)*avgW<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl<<endl;
+            //cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)*avgW<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl<<endl;
 
         }
 
@@ -778,7 +791,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
 }
 
-float CountEventsWithFit(TH1 *hist, TString name = "hist"){
+pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
 
     ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls( 10000 );
 
@@ -788,16 +801,10 @@ float CountEventsWithFit(TH1 *hist, TString name = "hist"){
     if(process_.Contains("BuJPsiK"))   mean = 5.2793;
     if(process_.Contains("BdJPsiKx"))  mean = 5.2796;
 
-    TString sgnDef = "[1]*TMath::Gaus(x, [0], [4], true)";
-    sgnDef +=       "+[2]*TMath::Gaus(x, [0], [5], true)";
-    sgnDef +=       "+[3]*TMath::Gaus(x, [0], [6], true)";
-
-    TString bkgDef;
-
-    if(process_.Contains("MC")) bkgDef = "[7]+[8]*x";
-    if(process_.Contains("Data")) bkgDef = "[7]+[8]*TMath::Erfc([9]*(x-[10]))";
-
-    TString funcDef = sgnDef + "+" + bkgDef;
+    TString funcDef = "[1]*TMath::Gaus(x, [0], [4], true)";
+    funcDef +=       "+[2]*TMath::Gaus(x, [0], [5], true)";
+    funcDef +=       "+[3]*TMath::Gaus(x, [0], [6], true)";
+    funcDef = "+[7]+[8]*TMath::Erfc([9]*(x-[10]))";
 
     TF1 *func = new TF1("func", funcDef, min_, max_);
 
@@ -818,37 +825,30 @@ float CountEventsWithFit(TH1 *hist, TString name = "hist"){
     func->SetParameter(4, sigma);
     func->SetParameter(5, sigma);
     func->SetParameter(6, sigma);
-    func->SetParameter(7, bkgHeight);
 
     func->SetParLimits(0, mean-sigma, mean+sigma);
     func->SetParLimits(1, 0, hist->GetEntries());
     func->SetParLimits(2, 0, hist->GetEntries());
     func->SetParLimits(3, 0, hist->GetEntries());
-    func->SetParLimits(4, sigma/2, sigma*2);
-    func->SetParLimits(5, sigma/2, sigma*2);
-    func->SetParLimits(6, sigma/2, sigma*2);
-    func->SetParLimits(7, bkgHeight/2, bkgHeight*2);
+    func->SetParLimits(4, sigma/2, sigma*2.5);
+    func->SetParLimits(5, sigma/2, sigma*2.5);
+    func->SetParLimits(6, sigma/2, sigma*2.5);
 
-    if(process_.Contains("MC")){
-        func->SetParameter(8, 0);
-    }
 
-    if(process_.Contains("Data")){
-        func->SetParameter(7, bkgHeight);
-        func->SetParameter(8, 1);
-        func->SetParameter(9, 20);
-        func->SetParameter(10, 5.10);
-        func->SetParLimits(8, 0, bkgHeight);
-        func->SetParLimits(9, 10, 1e3);
-        func->SetParLimits(10, 5.0, mean);
-    }
+    func->SetParameter(7, bkgHeight);
+    func->SetParameter(8, 1);
+    func->SetParameter(9, 20);
+    func->SetParameter(10, 5.10);
+    func->SetParLimits(8, 0, bkgHeight);
+    func->SetParLimits(9, 10, 1e3);
+    func->SetParLimits(10, 5.0, mean);
 
     func->SetNpx(2000);
 
     auto c5 = new TCanvas();
     hist->SetMarkerStyle(20);
     hist->SetMarkerSize(.75);
-    hist->Fit("func","MRLQ");
+    TFitResultPtr r = hist->Fit("func","MRLS");
     hist->Draw("PE");
     hist->SetMinimum(0.1);
 
@@ -856,40 +856,31 @@ float CountEventsWithFit(TH1 *hist, TString name = "hist"){
     TF1 *f1 = new TF1("f1","[0]*TMath::Gaus(x, [1], [2], true)", min_, max_);
     TF1 *f2 = new TF1("f2","[0]*TMath::Gaus(x, [1], [2], true)", min_, max_);
     TF1 *f3 = new TF1("f3","[0]*TMath::Gaus(x, [1], [2], true)", min_, max_);
-    TF1 *f4;
-    TF1 *f5;
+    TF1 *f4 = new TF1("f4","[0]", min_, max_);;
+    TF1 *f5 = new TF1("f5","[0]*TMath::Erfc([1]*(x-[2]))", min_, max_);;
 
     f1->SetParameters(fit->GetParameter(1),fit->GetParameter(0),fit->GetParameter(4));
     f2->SetParameters(fit->GetParameter(2),fit->GetParameter(0),fit->GetParameter(5));
     f3->SetParameters(fit->GetParameter(3),fit->GetParameter(0),fit->GetParameter(6));
-
-    if(process_.Contains("MC")){
-        f4 = new TF1("f4","[0]+[1]*x", min_, max_);
-        f4->SetParameter(fit->GetParameter(7), fit->GetParameter(8));
-    }
-    if(process_.Contains("Data")){
-        f4 = new TF1("f4","[0]", min_, max_);
-        f5 = new TF1("f5","[0]*TMath::Erfc([1]*(x-[2]))", min_, max_);
-        f4->SetParameter(0, fit->GetParameter(7));
-        f5->SetParameters(fit->GetParameter(8),fit->GetParameter(9),fit->GetParameter(10));
-    }
+    f4->SetParameter(0, fit->GetParameter(7));
+    f5->SetParameters(fit->GetParameter(8),fit->GetParameter(9),fit->GetParameter(10));
 
     f1->SetLineColor(kBlue);
     f2->SetLineColor(kViolet);
     f3->SetLineColor(kAzure);
-    f4->SetLineColor(kOrange);
-    if(process_.Contains("Data")) f5->SetLineColor(kGreen);
+    f4->SetLineColor(kOrange); 
+    f5->SetLineColor(kGreen);
     f1->SetLineStyle(2);
     f2->SetLineStyle(2);
     f3->SetLineStyle(2);
-    f4->SetLineStyle(2);
-    if(process_.Contains("Data")) f5->SetLineStyle(2);
+    f4->SetLineStyle(2); 
+    f5->SetLineStyle(2);
 
     f1->Draw("same");
     f2->Draw("same");
     f3->Draw("same");
-    f4->Draw("same");
-    if(process_.Contains("Data")) f5->Draw("same");
+    f4->Draw("same"); 
+    f5->Draw("same");
     c5->Print(name + ".pdf");
 
     float nEvt = fit->GetParameter(1);
@@ -897,6 +888,10 @@ float CountEventsWithFit(TH1 *hist, TString name = "hist"){
     nEvt += fit->GetParameter(3);
     nEvt/=hist->GetBinWidth(1);
 
-    return nEvt;
+    TMatrixDSym cov = r->GetCovarianceMatrix();
+
+    float errN = sqrt(cov(1,1)+cov(2,2)+cov(3,3)+2*(cov(1,2)+cov(1,3)+cov(2,3)))/hist->GetBinWidth(1);
+
+    return make_pair(nEvt, errN);
 
 }
