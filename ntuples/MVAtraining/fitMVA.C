@@ -26,14 +26,22 @@
 
 using namespace std;
 
+TString process_;
+float min_, max_;
+int nBins_ = 50;
+
+float CountEventsWithFit(TH1 *hist, TString name);
+
 void fitMVA(TString file_ = "ntuBsMC2017.root"
             , TString method_ = "DNNOsMuonHLTJpsiMu_test241"
             , TString mode_ = "CREATE"
-            , bool addMva_ = false
-            , bool readMva_ = false
+            , bool addMva_ = false      //currently deprecated
+            , bool readMva_ = false     //currently deprecated
+            , bool useTightSelection = false
             , int nEvents_ = -1)
 {
     gErrorIgnoreLevel = kWarning;
+    gStyle->SetOptFit();
     TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/ntuples/";
 
     cout<<"----- Parameters -----"<<endl;
@@ -66,6 +74,20 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     if(method_.Contains("JpsiTrkTrk")) HLT = "HltJpsiTrkTrk";
     if(method_.Contains("JpsiTrk") && !method_.Contains("JpsiTrkTrk")) HLT = "HltJpsiTrk";
 
+    if(file_.Contains("Bs")){
+        process_ = "BsJPsiPhi";
+        min_ = 5.25;
+        max_ = 5.50;
+    }
+    if(file_.Contains("Bu")){
+        process_ = "BuJPsiK";
+        min_ = 5.10;
+        max_ = 5.50;
+    }
+
+    if(file_.Contains("MC")) process_ = process_ + "MC";
+    if(file_.Contains("Data")) process_ = process_ + "Data";
+
     cout<<"HLT "<<HLT<<endl;
 
     int nCat;
@@ -90,8 +112,19 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     float evtWkde = -1.;
     float evtWkde_ext = -1.;
 
+    int nBinCheck = 20;
+    auto *wCalc = new float[nBinCheck];
+    TH1F **hMassRT[4];
+    TH1F **hMassWT[4];
+    for(int i=0; i<4; ++i){
+        hMassRT[i] = new TH1F*[nBinCheck];
+        hMassWT[i] = new TH1F*[nBinCheck];
+    }
+    
+    float pass = 1./nBinCheck;  //1. = 1.-0. (mva max - mva min)
+
 //----------READ INPUT FILE AND BOOK METHODS----------
-    if(mode_=="USE")
+    if(mode_ == "USE")
     {
         cout<<"----- USE METHOD MODE"<<endl;
 
@@ -109,7 +142,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             ifs >> catEdgeR[i];
             ifs >> catMistag[i];
         }
-        cout<<"Input categories [Ledge Redge mistag]"<<endl;
+        cout<<"Input categories [L-edge R-edge mistag]"<<endl;
         for(int i=0; i<nCat; ++i)
             cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<endl;
 
@@ -139,7 +172,15 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         delete f2;
         f->cd();
 
-        cout<<"----- METHOD BOOKED"<<endl;
+        for(int j=0;j<nBinCheck;++j){
+            wCalc[j] = (float)j*pass + pass/2;
+            for(int i=0; i<4; ++i){
+                hMassRT[i][j] = new TH1F(TString::Format("mbRT%i%i", i, j),"", nBins_, min_, max_);
+                hMassWT[i][j] = new TH1F(TString::Format("mbWT%i%i", i, j),"", nBins_, min_, max_);
+            }
+        } 
+
+        cout<<"----- METHOD BOOKED"<<endl;      
     }
 
 //----------DECLARE VARIABLES----------
@@ -175,7 +216,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     int osMuon, osMuonTag, osMuonCharge, ssbLund;
     //EVENT VARIABLES
     float ssbMass;
-    int evtWeight, hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk;
+    int evtWeight, hltJpsiMu, hltJpsiTrkTrk, hltJpsiTrk, ssbIsTight;
 
     t->SetBranchAddress("muoPt", &muoPt);
     t->SetBranchAddress("muoEta", &muoEta);
@@ -206,6 +247,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     t->SetBranchAddress("hltJpsiMu", &hltJpsiMu);
     t->SetBranchAddress("hltJpsiTrkTrk", &hltJpsiTrkTrk);
     t->SetBranchAddress("hltJpsiTrk", &hltJpsiTrk);
+    t->SetBranchAddress("ssbIsTight", &ssbIsTight);
 
 //----------COMPUTE MVA----------
     cout<<"----- BEGIN MVA SETUP"<<endl;
@@ -235,6 +277,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     auto *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );
     auto *mva_RT = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
     auto *mva_WT = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
+    auto *evtMistag = new TH1F( "evtMistag", "evtMistag", 50, 0.0, 1.0 );
     mva_WT->SetLineColor(kRed);
 
     vector<double> vKDERT;
@@ -249,14 +292,15 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
 
-        //HLT
+        //PRESELECTION EVENT
         if(HLT == "HltJpsiMu" && !hltJpsiMu) continue;
         if(HLT == "HltJpsiTrkTrk" && !hltJpsiTrkTrk) continue;
         if(HLT == "HltJpsiTrk" && !hltJpsiTrk) continue;
+        if(useTightSelection && !ssbIsTight) continue;
 
         nEventsRead++;
 
-        //PRESELECTION
+        //PRESELECTION MUON
         if(!osMuon) continue;
         if((fabs(muoEta)<1.2 && muoSoftMvaValue<=0.891)) continue;
         if((fabs(muoEta)>=1.2 && muoSoftMvaValue<=0.8925)) continue;
@@ -303,13 +347,44 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
             totPCat += pow(1.-2.*evtWcat, 2)*evtWeight;
             totPKde += pow(1.-2.*evtWkde ,2)*evtWeight;
+
+            evtMistag->Fill(evtWkde, evtWeight);
+
+            for(int j=0;j<nBinCheck;++j){
+                if( (evtWcat>=(float)j*pass) && (evtWcat<((float)j*pass+pass)) ){
+                    if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[0][j]->Fill(ssbMass, evtWeight);
+                    if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[0][j]->Fill(ssbMass, evtWeight);
+                    break;
+                }
+            }
+            for(int j=0;j<nBinCheck;++j){
+                if( (evtWfit>=(float)j*pass) && (evtWfit<((float)j*pass+pass)) ){
+                    if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[1][j]->Fill(ssbMass, evtWeight);
+                    if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[1][j]->Fill(ssbMass, evtWeight);
+                    break;
+                }
+            }
+            for(int j=0;j<nBinCheck;++j){             
+                if( (evtWkde>=(float)j*pass) && (evtWkde<((float)j*pass+pass)) ){
+                    if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[2][j]->Fill(ssbMass, evtWeight);
+                    if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[2][j]->Fill(ssbMass, evtWeight);
+                    break;
+                }
+            }                
+            for(int j=0;j<nBinCheck;++j){
+                if( (evtWkde_ext>=(float)j*pass) && (evtWkde_ext<((float)j*pass+pass)) ){
+                    if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[3][j]->Fill(ssbMass, evtWeight);
+                    if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[3][j]->Fill(ssbMass, evtWeight);
+                }
+            }
+
         }
 
         mva->Fill(mvaValue, evtWeight);
         if(osMuonTag == 1){
             mva_RT->Fill(mvaValue, evtWeight);
             vKDERT.push_back(mvaValue);
-            if(evtWeight==2) vKDERT.push_back(mvaValue); //to avoid using weights in kde
+            if(evtWeight==2) vKDERT.push_back(mvaValue); //avoid using weights in kde
         }
         if(osMuonTag == 0){
             mva_WT->Fill(mvaValue, evtWeight);
@@ -324,6 +399,128 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
     cout<<"nRT "<<nRT<<endl;
     cout<<"nWT "<<nWT<<endl;
+
+//----------USE----------
+    if(mode_ == "USE"){
+
+        for(int i=0; i<4; ++i){
+            for(int j=0;j<nBinCheck;++j){
+                cout<<i<<" "<<j<<" --- "<<hMassRT[i][j]->Integral()<<" "<<hMassWT[i][j]->Integral()<<endl;
+            }
+            cout<<endl;
+        }
+
+        for(int i=0; i<4; ++i){
+            cout<<"TYPE "<<i<<endl;
+
+            vector<float> vX;
+            vector<float> vY;
+            vector<float> vEY;
+
+            int minEntries = 5;
+
+            int rebinThr = 1000;
+            if(file_.Contains("Data")) rebinThr = 5000;
+
+            for(int j=0;j<nBinCheck;++j){
+                float nMassRT = hMassRT[i][j]->Integral();
+                float nMassWT = hMassWT[i][j]->Integral();
+                if(nMassRT < minEntries && nMassWT < minEntries ) continue;
+
+                if(nMassRT<rebinThr) hMassRT[i][j]->Rebin();
+                if(nMassWT<rebinThr) hMassWT[i][j]->Rebin();
+
+                if(nMassRT >= minEntries) nMassRT = CountEventsWithFit(hMassRT[i][j], TString::Format("hMassRT%i%i", i, j));
+                if(nMassWT >= minEntries) nMassWT = CountEventsWithFit(hMassWT[i][j], TString::Format("hMassWT%i%i", i, j));
+
+                vX.push_back( wCalc[j] );
+                vY.push_back( nMassWT/(nMassWT+nMassRT) );
+                if(nMassWT == 0) vEY.push_back(1/nMassRT);
+                else if(nMassRT == 0) vEY.push_back(1/nMassWT);
+                else vEY.push_back(sqrt((nMassWT * nMassRT)/pow((nMassWT + nMassRT),3) ));
+
+                cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", nRT "<<nMassRT<<", nWT "<<nMassWT<<", wMeas "<<nMassWT/(nMassWT+nMassRT);
+                cout<<" +- "<<sqrt((nMassWT * nMassRT)/pow((nMassRT),3) )<<endl;
+            }
+
+            auto *grW = new TGraphErrors(vX.size(),&vX[0],&vY[0],0,&vEY[0]);
+            auto *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,1.);
+            fCheck->FixParameter(2, avgW);
+            fCheck->SetParameter(0, avgW);
+            fCheck->SetParameter(1, 1);
+
+            grW->Fit("fCheck");
+            auto *myfunc = grW->GetFunction("fCheck");
+
+            vector<float> wResY;
+            vector<float> wResEY;
+
+            for (unsigned int j=0;j<vX.size();++j) { 
+                wResY.push_back((vY[j] - myfunc->Eval(vX[j]))/vEY[j]);
+                wResEY.push_back(1.);
+            } 
+
+            auto *grWres = new TGraphErrors(vX.size(),&vX[0],&wResY[0],0,&wResEY[0]);
+
+            auto *c30 = new TCanvas();
+            c30->Divide(1,2);
+            c30->cd(1);
+            grW->SetMarkerStyle(20);
+            grW->SetMarkerSize(.5);
+            grW->SetMaximum(1.);
+            grW->SetMinimum(0);
+            grW->Draw("APE");
+            c30->cd(2);
+            grWres->SetMarkerStyle(20);
+            grWres->SetMarkerSize(.5);
+            grWres->Draw("APE");
+            auto *y0_ = new TF1("","0.",0.,1.);
+            auto *y1_ = new TF1("","1.",0.,1.);
+            auto *y1__ = new TF1("","-1.",0.,1.);
+            auto *y2_ = new TF1("","2.",0.,1.);
+            auto *y2__ = new TF1("","-2.",0.,1.);
+            auto *y3_ = new TF1("","3.",0.,1.);
+            auto *y3__ = new TF1("","-3.",0.,1.);
+            y0_->SetLineColor(kBlack);
+            y1_->SetLineColor(kGreen);
+            y1__->SetLineColor(kGreen);
+            y2_->SetLineColor(kOrange);
+            y2__->SetLineColor(kOrange);
+            y3_->SetLineColor(kRed);
+            y3__->SetLineColor(kRed);
+            y1_->SetLineWidth(1);
+            y1__->SetLineWidth(1);
+            y2_->SetLineWidth(1);
+            y2__->SetLineWidth(1);
+            y3_->SetLineWidth(1);
+            y3__->SetLineWidth(1);
+            y1_->SetLineStyle(2);
+            y1__->SetLineStyle(2);
+            y2_->SetLineStyle(2);
+            y2__->SetLineStyle(2);
+            y3_->SetLineStyle(2);
+            y3__->SetLineStyle(2);
+            y0_->Draw("SAME");
+            y1_->Draw("SAME");
+            y1__->Draw("SAME");
+            y2_->Draw("SAME");
+            y2__->Draw("SAME");
+            y3_->Draw("SAME");
+            y3__->Draw("SAME");
+
+            c30->Print("validation" + process_ + HLT + TString::Format("_TYPE%i.pdf", i));
+
+            float p0 = myfunc->GetParameter(0);
+            float p1 = myfunc->GetParameter(0);
+
+            cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)*avgW<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl<<endl;
+
+        }
+
+        auto *c32 = new TCanvas();
+        evtMistag->DrawCopy("hist");
+        c32->Print("perEvtMistagHist" + process_ + HLT + ".pdf");
+    }
 
 //----------CREATE----------
     if(mode_ == "CREATE")
@@ -563,9 +760,9 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
         c3->Update();
 
-        c10->Print("kdeDistributions.pdf");
-        c2->Print("mvaDistributions.pdf");
-        c3->Print("perEventW.pdf");
+        c10->Print("kdeDistributions" + process_ + HLT + ".pdf");
+        c2->Print("mvaDistributions" + process_ + HLT + ".pdf");
+        c3->Print("perEventW" + process_ + HLT + ".pdf");
     }
 
     cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEventsRead<<"%"<<endl;
@@ -578,5 +775,128 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     f->Close();
     delete f;
     return;
+
+}
+
+float CountEventsWithFit(TH1 *hist, TString name = "hist"){
+
+    ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls( 10000 );
+
+    float mean = 5.3663;
+    float sigma = 0.015;
+    if(process_.Contains("BsJPsiPhi")) mean = 5.3663;
+    if(process_.Contains("BuJPsiK"))   mean = 5.2793;
+    if(process_.Contains("BdJPsiKx"))  mean = 5.2796;
+
+    TString sgnDef = "[1]*TMath::Gaus(x, [0], [4], true)";
+    sgnDef +=       "+[2]*TMath::Gaus(x, [0], [5], true)";
+    sgnDef +=       "+[3]*TMath::Gaus(x, [0], [6], true)";
+
+    TString bkgDef;
+
+    if(process_.Contains("MC")) bkgDef = "[7]+[8]*x";
+    if(process_.Contains("Data")) bkgDef = "[7]+[8]*TMath::Erfc([9]*(x-[10]))";
+
+    TString funcDef = sgnDef + "+" + bkgDef;
+
+    TF1 *func = new TF1("func", funcDef, min_, max_);
+
+    float limit = hist->GetEntries()*hist->GetBinWidth(1);
+
+    float bkgHeight = 0;
+    for(int i=0; i<5; i++){
+        bkgHeight += hist->GetBinContent(i+i);
+        bkgHeight += hist->GetBinContent(hist->GetNbinsX()-i);
+    }
+
+    bkgHeight /= 10;
+
+    func->SetParameter(0, mean);
+    func->SetParameter(1, limit/3);
+    func->SetParameter(2, limit/3);
+    func->SetParameter(3, limit/3);
+    func->SetParameter(4, sigma);
+    func->SetParameter(5, sigma);
+    func->SetParameter(6, sigma);
+    func->SetParameter(7, bkgHeight);
+
+    func->SetParLimits(0, mean-sigma, mean+sigma);
+    func->SetParLimits(1, 0, hist->GetEntries());
+    func->SetParLimits(2, 0, hist->GetEntries());
+    func->SetParLimits(3, 0, hist->GetEntries());
+    func->SetParLimits(4, sigma/2, sigma*2);
+    func->SetParLimits(5, sigma/2, sigma*2);
+    func->SetParLimits(6, sigma/2, sigma*2);
+    func->SetParLimits(7, bkgHeight/2, bkgHeight*2);
+
+    if(process_.Contains("MC")){
+        func->SetParameter(8, 0);
+    }
+
+    if(process_.Contains("Data")){
+        func->SetParameter(7, bkgHeight);
+        func->SetParameter(8, 1);
+        func->SetParameter(9, 20);
+        func->SetParameter(10, 5.10);
+        func->SetParLimits(8, 0, bkgHeight);
+        func->SetParLimits(9, 10, 1e3);
+        func->SetParLimits(10, 5.0, mean);
+    }
+
+    func->SetNpx(2000);
+
+    auto c5 = new TCanvas();
+    hist->SetMarkerStyle(20);
+    hist->SetMarkerSize(.75);
+    hist->Fit("func","MRLQ");
+    hist->Draw("PE");
+    hist->SetMinimum(0.1);
+
+    TF1 *fit = hist->GetFunction("func");
+    TF1 *f1 = new TF1("f1","[0]*TMath::Gaus(x, [1], [2], true)", min_, max_);
+    TF1 *f2 = new TF1("f2","[0]*TMath::Gaus(x, [1], [2], true)", min_, max_);
+    TF1 *f3 = new TF1("f3","[0]*TMath::Gaus(x, [1], [2], true)", min_, max_);
+    TF1 *f4;
+    TF1 *f5;
+
+    f1->SetParameters(fit->GetParameter(1),fit->GetParameter(0),fit->GetParameter(4));
+    f2->SetParameters(fit->GetParameter(2),fit->GetParameter(0),fit->GetParameter(5));
+    f3->SetParameters(fit->GetParameter(3),fit->GetParameter(0),fit->GetParameter(6));
+
+    if(process_.Contains("MC")){
+        f4 = new TF1("f4","[0]+[1]*x", min_, max_);
+        f4->SetParameter(fit->GetParameter(7), fit->GetParameter(8));
+    }
+    if(process_.Contains("Data")){
+        f4 = new TF1("f4","[0]", min_, max_);
+        f5 = new TF1("f5","[0]*TMath::Erfc([1]*(x-[2]))", min_, max_);
+        f4->SetParameter(0, fit->GetParameter(7));
+        f5->SetParameters(fit->GetParameter(8),fit->GetParameter(9),fit->GetParameter(10));
+    }
+
+    f1->SetLineColor(kBlue);
+    f2->SetLineColor(kViolet);
+    f3->SetLineColor(kAzure);
+    f4->SetLineColor(kOrange);
+    if(process_.Contains("Data")) f5->SetLineColor(kGreen);
+    f1->SetLineStyle(2);
+    f2->SetLineStyle(2);
+    f3->SetLineStyle(2);
+    f4->SetLineStyle(2);
+    if(process_.Contains("Data")) f5->SetLineStyle(2);
+
+    f1->Draw("same");
+    f2->Draw("same");
+    f3->Draw("same");
+    f4->Draw("same");
+    if(process_.Contains("Data")) f5->Draw("same");
+    c5->Print(name + ".pdf");
+
+    float nEvt = fit->GetParameter(1);
+    nEvt += fit->GetParameter(2);
+    nEvt += fit->GetParameter(3);
+    nEvt/=hist->GetBinWidth(1);
+
+    return nEvt;
 
 }
