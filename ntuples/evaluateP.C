@@ -59,7 +59,7 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
 
     TString cut = "( (fabs(muoEta)<1.2 && muoSoftMvaValue>0.891) || (fabs(muoEta)>=1.2 && muoSoftMvaValue>0.8925) )";
     cut += "&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)";
-    TString cutEvt = "hltJpsiMu==1&&ssbIsTight";
+    TString cutEvt = "hltJpsiMu&&ssbIsTight";
 
     if(cutEvt_ != "") cutEvt = cutEvt + "&&" + cutEvt_;
     if(cut_ != "")    cut = cut + "&&" + cut_;
@@ -73,16 +73,19 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     t->Project("ssB_WT", "ssbMass", cutWT );
 
     pair<float, float> nTot;
+    pair<float, float> nUntag;
     pair<float, float> nRT;
     pair<float, float> nWT;
 
     nTot.first = ssB->Integral();
     nRT.first = ssB_RT->Integral();
     nWT.first = ssB_WT->Integral();
+    nUntag.first = nTot.first - nRT.first - nWT.first;
 
     nTot.second = sqrt(nTot.first);
     nRT.second = sqrt(nRT.first);
     nWT.second = sqrt(nWT.first);
+    nUntag.first = sqrt(nUntag.first);
 
     if(file.Contains("Data")){
         nTot = CountEventsWithFit(ssB);
@@ -95,9 +98,9 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
 
     cout<<endl;
 
-    cout<<"Bs = "<<nTot.first<<endl;
-    cout<<"RT = "<<nRT.first<<endl;
-    cout<<"WT = "<<nWT.first<<endl;    
+    cout<<"Bs = "<<nTot.first<<" +- "<<nTot.second<<endl;
+    cout<<"RT = "<<nRT.first<<" +- "<<nRT.second<<endl;
+    cout<<"WT = "<<nWT.first<<" +- "<<nWT.second<<endl;    
 
     cout<<"Eff = "<<100*eff<<"%"<<endl;
     cout<<"Mistag = "<<100*w<<"%"<<endl;
