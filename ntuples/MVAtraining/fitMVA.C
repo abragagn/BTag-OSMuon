@@ -27,6 +27,7 @@
 using namespace std;
 
 TString process_;
+TString dirPath_;
 float min_, max_;
 int nBins_ = 50;
 
@@ -35,8 +36,6 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name);
 void fitMVA(TString file_ = "ntuBsMC2017.root"
             , TString method_ = "DNNOsMuonHLTJpsiMu_test241"
             , TString mode_ = "CREATE"
-            , bool addMva_ = false      //currently deprecated
-            , bool readMva_ = false     //currently deprecated
             , bool useTightSelection = false
             , int nEvents_ = -1)
 {
@@ -48,17 +47,10 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     cout<<"file_ "<<file_<<endl;
     cout<<"method_ "<<method_<<endl;
     cout<<"mode_ "<<mode_<<endl;
-    cout<<"addMva_ "<<addMva_<<endl;
-    cout<<"readMva_ "<<readMva_<<endl;
     cout<<"nEvents_ "<<nEvents_<<endl;
 
     if(mode_ != "CREATE" && mode_ != "USE"){
         cout<<"WRONG MODE_"<<endl;
-        return;
-    }
-
-    if(addMva_ && readMva_){
-        cout<<"CAN'T READ AND WRITE MVA AT THE SAME TIME"<<endl;
         return;
     }
 
@@ -78,15 +70,23 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         process_ = "BsJPsiPhi";
         min_ = 5.25;
         max_ = 5.50;
+        dirPath_ = "./Bs";
     }
     if(file_.Contains("Bu")){
         process_ = "BuJPsiK";
         min_ = 5.10;
         max_ = 5.50;
+        dirPath_ = "./Bu";
     }
 
-    if(file_.Contains("MC")) process_ = process_ + "MC";
-    if(file_.Contains("Data")) process_ = process_ + "Data";
+    if(file_.Contains("MC")){
+        process_ = process_ + "MC";
+        dirPath_ += "MC";
+    }
+    if(file_.Contains("Data")){
+        process_ = process_ + "Data";
+        dirPath_ += "Data";
+    }
 
     cout<<"HLT "<<HLT<<endl;
 
@@ -350,7 +350,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             totPCat += pow(1.-2.*evtWcat, 2)*evtWeight;
             totPKde += pow(1.-2.*evtWkde ,2)*evtWeight;
 
-            evtMistag->Fill(evtWkde, evtWeight);
+            evtMistag->Fill(evtWkde_ext, evtWeight);
 
             for(int j=0;j<nBinCheck;++j){
                 if( (evtWcat>=(float)j*pass) && (evtWcat<((float)j*pass+pass)) ){
@@ -541,7 +541,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             y3_->Draw("SAME");
             y3__->Draw("SAME");
 */
-            c30->Print("validation" + process_ + HLT + TString::Format("_TYPE%i.pdf", i));
+            c30->Print(dirPath_ + "/" + "validation" + process_ + HLT + TString::Format("_TYPE%i.pdf", i));
 
             float p0 = myfunc->GetParameter(0);
             float p1 = myfunc->GetParameter(0);
@@ -552,7 +552,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
         auto *c32 = new TCanvas();
         evtMistag->DrawCopy("hist");
-        c32->Print("perEvtMistagHist" + process_ + HLT + ".pdf");
+        c32->Print(dirPath_ + "/" + "perEvtMistagHist" + process_ + HLT + ".pdf");
     }
 
 //----------CREATE----------
@@ -798,9 +798,9 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         c3->Print("perEventW" + process_ + HLT + ".pdf");
     }
 
-    cout<<endl<<"NoCat Eff = "<<100.*(float)(nRT+nWT)/nEventsRead<<"%"<<endl;
-    cout<<"NoCat W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
-    cout<<"NoCat P = "<<100.*((float)(nRT+nWT)/nEventsRead)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
+    cout<<endl<<"Base Eff = "<<100.*(float)(nRT+nWT)/nEventsRead<<"%"<<endl;
+    cout<<"Base W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
+    cout<<"Base P = "<<100.*((float)(nRT+nWT)/nEventsRead)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
 
     cout<<endl<<"Cat P = "<<100.*totPCat/(float)nEventsRead<<"%"<<endl;
     cout<<"KDE P = "<<100.*totPKde/(float)nEventsRead<<"%"<<endl;
@@ -873,7 +873,7 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
     auto c5 = new TCanvas();
     hist->SetMarkerStyle(20);
     hist->SetMarkerSize(.75);
-    TFitResultPtr r = hist->Fit("func","MRLS");
+    TFitResultPtr r = hist->Fit("func","MRLQS");
     hist->Draw("PE");
     hist->SetMinimum(0);
 
@@ -903,7 +903,7 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
     f2->Draw("same");
     f3->Draw("same");
     f4->Draw("same");
-    c5->Print(name + ".pdf");
+    c5->Print(dirPath_ + "/" + name + ".pdf");
 
     float nEvt = fit->GetParameter(1);
     nEvt += fit->GetParameter(2);
