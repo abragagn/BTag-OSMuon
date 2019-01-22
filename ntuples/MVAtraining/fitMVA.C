@@ -113,12 +113,14 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     float evtWkde_ext = -1.;
 
     int nBinCheck = 20;
-    auto *wCalc = new float[nBinCheck];
     TH1F **hMassRT[4];
     TH1F **hMassWT[4];
+
+    float **wCalc = new float*[4];
     for(int i=0; i<4; ++i){
         hMassRT[i] = new TH1F*[nBinCheck];
         hMassWT[i] = new TH1F*[nBinCheck];
+        wCalc[i] = new float[nBinCheck];
     }
     
     float pass = 1./nBinCheck;  //1. = 1.-0. (mva max - mva min)
@@ -173,10 +175,10 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         f->cd();
 
         for(int j=0;j<nBinCheck;++j){
-            wCalc[j] = (float)j*pass + pass/2;
             for(int i=0; i<4; ++i){
                 hMassRT[i][j] = new TH1F(TString::Format("mbRT%i%i", i, j),"", nBins_, min_, max_);
                 hMassWT[i][j] = new TH1F(TString::Format("mbWT%i%i", i, j),"", nBins_, min_, max_);
+                wCalc[i][j] = 0.;
             }
         } 
 
@@ -354,6 +356,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
                 if( (evtWcat>=(float)j*pass) && (evtWcat<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[0][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[0][j]->Fill(ssbMass, evtWeight);
+                    wCalc[0][j] += evtWcat*evtWeight;
                     break;
                 }
             }
@@ -361,6 +364,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
                 if( (evtWfit>=(float)j*pass) && (evtWfit<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[1][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[1][j]->Fill(ssbMass, evtWeight);
+                    wCalc[1][j] += evtWfit*evtWeight;
                     break;
                 }
             }
@@ -368,13 +372,15 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
                 if( (evtWkde>=(float)j*pass) && (evtWkde<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[2][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[2][j]->Fill(ssbMass, evtWeight);
+                    wCalc[2][j] += evtWkde*evtWeight;
                     break;
                 }
-            }                
+            }
             for(int j=0;j<nBinCheck;++j){
                 if( (evtWkde_ext>=(float)j*pass) && (evtWkde_ext<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[3][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[3][j]->Fill(ssbMass, evtWeight);
+                    wCalc[3][j] += evtWkde_ext*evtWeight;
                 }
             }
 
@@ -403,10 +409,17 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 //----------USE----------
     if(mode_ == "USE"){
         for(int i=0; i<4; ++i){
+            for(int j=0;j<nBinCheck;++j){
+                wCalc[i][j] /= (hMassRT[i][j]->Integral() + hMassWT[i][j]->Integral());
+            }
+        }
+
+        for(int i=0; i<4; ++i){
             cout<<"TYPE "<<i<<endl;
 
             vector<float> vX;
             vector<float> vY;
+            vector<float> vEX;
             vector<float> vEY;
 
             int minEntries = 0;
@@ -418,8 +431,8 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
                 nMassRT.first = hMassRT[i][j]->Integral();
                 nMassWT.first = hMassWT[i][j]->Integral();
-                nMassRT.second = sqrt(hMassRT[i][j]->Integral());
-                nMassWT.second = sqrt(hMassWT[i][j]->Integral());
+                nMassRT.second = sqrt(nMassRT.first);
+                nMassWT.second = sqrt(nMassWT.first);
 
                 if(nMassRT.first <= minEntries && nMassWT.first <= minEntries ) continue;
 
@@ -430,7 +443,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
                     if(nMassWT.first >= minEntries) nMassWT = CountEventsWithFit(hMassWT[i][j], TString::Format("hMassWT%i%i", i, j));
                 }
 
-                vX.push_back( wCalc[j] );
+                vX.push_back( wCalc[i][j] );
                 vY.push_back( nMassWT.first/(nMassWT.first + nMassRT.first) ); // MEASURED MISTAG
 
                 float errMistag, errRT, errWT;
@@ -451,7 +464,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
                 vEY.push_back(errMistag);
 
-                cout<<"BIN "<<j<<", wCalc "<<wCalc[j]<<", nRT "<<nMassRT.first<<"+-"<<errRT<<", nWT "<<nMassWT.first<<"+-"<<errWT<<", wMeas "<<nMassWT.first/(nMassWT.first + nMassRT.first);
+                cout<<"BIN "<<j<<", wCalc "<<wCalc[i][j]<<", nRT "<<nMassRT.first<<"+-"<<errRT<<", nWT "<<nMassWT.first<<"+-"<<errWT<<", wMeas "<<nMassWT.first/(nMassWT.first + nMassRT.first);
                 cout<<" +- "<<errMistag<<endl;
             }
 
@@ -475,26 +488,34 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
             auto *grWres = new TGraphErrors(vX.size(),&vX[0],&wResY[0],0,&wResEY[0]);
 
-            auto *c30 = new TCanvas();
+            auto *c30 = new TCanvas("c30","c30",1000,1600);
             c30->Divide(1,2);
             c30->cd(1);
             grW->SetMarkerStyle(20);
-            grW->SetMarkerSize(.5);
+            grW->SetMarkerSize(1);
             grW->SetMaximum(1.);
             grW->SetMinimum(0);
-            grW->Draw("APE");
+            grW->SetTitle("");
+            grW->GetXaxis()->SetTitle("w calc.");
+            grW->GetYaxis()->SetTitle("w meas.");
+
+            grW->Draw("APZ SAME");
             c30->cd(2);
             grWres->SetMarkerStyle(20);
-            grWres->SetMarkerSize(.5);
-            grWres->Draw("APE");
+            grWres->SetMarkerSize(1);
+            grWres->Draw("APZ");
+            grWres->SetTitle("");
+            grWres->GetYaxis()->SetTitle("# std dev");
             auto *y0_ = new TF1("","0.",0.,1.);
-            auto *y1_ = new TF1("","1.",0.,1.);
+            y0_->SetLineColor(kBlack);
+            y0_->Draw("SAME");
+
+/*            auto *y1_ = new TF1("","1.",0.,1.);
             auto *y1__ = new TF1("","-1.",0.,1.);
             auto *y2_ = new TF1("","2.",0.,1.);
             auto *y2__ = new TF1("","-2.",0.,1.);
             auto *y3_ = new TF1("","3.",0.,1.);
             auto *y3__ = new TF1("","-3.",0.,1.);
-            y0_->SetLineColor(kBlack);
             y1_->SetLineColor(kGreen);
             y1__->SetLineColor(kGreen);
             y2_->SetLineColor(kOrange);
@@ -513,14 +534,13 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             y2__->SetLineStyle(2);
             y3_->SetLineStyle(2);
             y3__->SetLineStyle(2);
-            y0_->Draw("SAME");
             y1_->Draw("SAME");
             y1__->Draw("SAME");
             y2_->Draw("SAME");
             y2__->Draw("SAME");
             y3_->Draw("SAME");
             y3__->Draw("SAME");
-
+*/
             c30->Print("validation" + process_ + HLT + TString::Format("_TYPE%i.pdf", i));
 
             float p0 = myfunc->GetParameter(0);
@@ -830,9 +850,7 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
     func->SetParLimits(5, sigma/2, sigma*2);
     func->SetParLimits(6, sigma/2, sigma*2);
 
-
     //BKG
-
     float bkgHeight = 0.;
     int nBinsBkgEst = 7;
     for(int i=0; i<nBinsBkgEst; i++)
@@ -896,5 +914,4 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
     float errN = sqrt(cov(1,1)+cov(2,2)+cov(3,3)+2*(cov(1,2)+cov(1,3)+cov(2,3)))/hist->GetBinWidth(1);
 
     return make_pair(nEvt, errN);
-
 }
