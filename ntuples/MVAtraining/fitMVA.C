@@ -108,10 +108,10 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     TGraph *g_pdfW;
     TGraph *g_pdfW_extended;
 
-    float evtWcat = -1.;
-    float evtWfit = -1.;
-    float evtWkde = -1.;
-    float evtWkde_ext = -1.;
+    float evtWcat[2] = {-1, -1};
+    float evtWfit[2] = {-1, -1};
+    float evtWkde[2] = {-1, -1};
+    float evtWkde_ext[2] = {-1, -1};
 
     int nBinCheck = 30;
     TH1F **hMassRT[4];
@@ -333,66 +333,69 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         if(mode_=="USE"){
             if( mvaValue < catEdgeL[0] ){ //EVENTS WITH MVA<MVA_MIN USED IN CREATING THE METHOD
                 cout<<"-----Undercat "<<mvaValue<<" at "<<i<<endl;
-                evtWcat = catMistag[0];
-                evtWfit = perEvtW->Eval(catEdgeL[0]);
+                evtWcat[0] = catMistag[0];
+                evtWcat[1] = catMistagErr[0];
+                evtWfit[0] = perEvtW->Eval(catEdgeL[0]);
             }else if( mvaValue >= catEdgeR[nCat-1] ){ //EVENTS WITH MVA>=MVA_MAX USED IN CREATING THE METHOD
                 cout<<"-----Overcat "<<mvaValue<<" at "<<i<<endl;
-                evtWcat = catMistag[nCat-1];
-                evtWfit = perEvtW->Eval(catEdgeR[nCat-1]);
+                evtWcat[0] = catMistag[nCat-1];
+                evtWcat[1] = catMistagErr[nCat-1];
+                evtWfit[0] = perEvtW->Eval(catEdgeR[nCat-1]);
             }else{
                 for(int j=0; j<nCat; ++j){ //EVENTS WITH MVA IN [MVA_MIN, MVA_MAX] USED IN CREATING THE METHOD
                     if(( mvaValue >= catEdgeL[j]) && (mvaValue < catEdgeR[j]) )
                     { 
-                        evtWcat = catMistag[j]; //CAT
+                        evtWcat[0] = catMistag[j]; //CAT
+                        evtWcat[1] = catMistagErr[j];
                         break; 
                     }
                 }
-                evtWfit = perEvtW->Eval(mvaValue);  //FIT
+                evtWfit[0] = perEvtW->Eval(mvaValue);  //FIT
             }
-            evtWkde = g_pdfW->Eval(mvaValue, 0, "S");   //KDE
-            evtWkde_ext = g_pdfW_extended->Eval(mvaValue, 0, "S");  //KDE EXTENDED
+            evtWkde[0] = g_pdfW->Eval(mvaValue, 0, "S");   //KDE
+            evtWkde_ext[0] = g_pdfW_extended->Eval(mvaValue, 0, "S");  //KDE EXTENDED
 
-            totPCat += pow(1.-2.*evtWcat, 2)*evtWeight;
-            totPKde += pow(1.-2.*evtWkde ,2)*evtWeight;
+            totPCat += pow(1.-2.*evtWcat[0], 2)*evtWeight;
+            totPKde += pow(1.-2.*evtWkde[0] ,2)*evtWeight;
 
             if( (ssbMass>5.18) && (ssbMass<5.37) ){
-                evtMistagSignal->Fill(evtWkde_ext, evtWeight);
-                evtMistagSignal_bis->Fill(evtWkde, evtWeight);
-                evtMistagSignal_Cat->Fill(evtWcat, evtWeight);
-                evtMistagSignal_Fit->Fill(evtWfit, evtWeight);
+                evtMistagSignal->Fill(evtWkde_ext[0], evtWeight);
+                evtMistagSignal_bis->Fill(evtWkde[0], evtWeight);
+                evtMistagSignal_Cat->Fill(evtWcat[0], evtWeight);
+                evtMistagSignal_Fit->Fill(evtWfit[0], evtWeight);
             }
-            else evtMistagSide->Fill(evtWkde_ext, evtWeight);
+            else evtMistagSide->Fill(evtWkde_ext[0], evtWeight);
 
 
             for(int j=0;j<nBinCheck;++j){
-                if( (evtWcat>=(float)j*pass) && (evtWcat<((float)j*pass+pass)) ){
+                if( (evtWcat[0]>=(float)j*pass) && (evtWcat[0]<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[0][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[0][j]->Fill(ssbMass, evtWeight);
-                    wCalc[0][j] += evtWcat*evtWeight;
+                    wCalc[0][j] += evtWcat[0]*evtWeight;
                     break;
                 }
             }
             for(int j=0;j<nBinCheck;++j){
-                if( (evtWfit>=(float)j*pass) && (evtWfit<((float)j*pass+pass)) ){
+                if( (evtWfit[0]>=(float)j*pass) && (evtWfit[0]<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[1][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[1][j]->Fill(ssbMass, evtWeight);
-                    wCalc[1][j] += evtWfit*evtWeight;
+                    wCalc[1][j] += evtWfit[0]*evtWeight;
                     break;
                 }
             }
             for(int j=0;j<nBinCheck;++j){             
-                if( (evtWkde>=(float)j*pass) && (evtWkde<((float)j*pass+pass)) ){
+                if( (evtWkde[0]>=(float)j*pass) && (evtWkde[0]<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[2][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[2][j]->Fill(ssbMass, evtWeight);
-                    wCalc[2][j] += evtWkde*evtWeight;
+                    wCalc[2][j] += evtWkde[0]*evtWeight;
                     break;
                 }
             }
             for(int j=0;j<nBinCheck;++j){
-                if( (evtWkde_ext>=(float)j*pass) && (evtWkde_ext<((float)j*pass+pass)) ){
+                if( (evtWkde_ext[0]>=(float)j*pass) && (evtWkde_ext[0]<((float)j*pass+pass)) ){
                     if(TMath::Sign(1, ssbLund) == evtTag) hMassRT[3][j]->Fill(ssbMass, evtWeight);
                     if(TMath::Sign(1, ssbLund) != evtTag) hMassWT[3][j]->Fill(ssbMass, evtWeight);
-                    wCalc[3][j] += evtWkde_ext*evtWeight;
+                    wCalc[3][j] += evtWkde_ext[0]*evtWeight;
                 }
             }
 
