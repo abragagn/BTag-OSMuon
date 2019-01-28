@@ -153,26 +153,12 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         for(int i=0; i<nCat; ++i)
             cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<" "<<catMistagErr[i]<<endl;
 
-        //FIT
-        ifs >> perEvtWFormula;
-        int nPar;
-        ifs >> avgW;
-        ifs >> nPar;
-        cout<<endl<<"Input function"<<endl;
-        cout<<perEvtWFormula<<endl;
-        cout<<"avgW = "<<avgW<<endl;
-        perEvtW = new TF1("perEvtW", perEvtWFormula, 0., 1.);
-        for(int i=0;i<nPar;++i){
-            float par;
-            ifs >> par;
-            perEvtW->SetParameter(i, par);
-            cout<<"p"<<i<<" = "<<par<<endl;
-        }
-
         ifs.close();
 
-        auto *f2 = new TFile("OSMuonTagger" + HLT + "KDE.root");
+        //FIT
+        auto *f2 = new TFile("OSMuonTagger" + HLT + "Functions.root");
         f2->cd();
+        perEvtW = (TF1*)f2->Get("fitErf")
         g_pdfW = (TGraph*)f2 ->Get("pdfW");
         g_pdfW_extended = (TGraph*)f2 ->Get("pdfW_extended");
         f2->Close();
@@ -795,18 +781,15 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             ofs<<" "<<catEdge[i]<<" ";
             ofs<<catW[i]<<" "<<catWerr[i]<<endl;
         }
-        //FUNCTION
-        ofs<<perEvtWFormula<<endl;
-        ofs<<avgW<<endl;
-        ofs<<fitErf->GetNumberFreeParameters()<<endl;
-        for(int j=0;j<fitErf->GetNumberFreeParameters();++j)
-            ofs<<fitErf->GetParameter(j)<<endl;
+
         ofs.close();
 
-        auto *fo = new TFile("OSMuonTagger" + HLT + "KDE.root", "RECREATE");
+        //FUNCTIONS
+        auto *fo = new TFile("OSMuonTagger" + HLT + "Functions.root", "RECREATE");
         fo->cd();
         out_pdfW->Write();
         out_pdfW_extended->Write();
+        fitErf->Write();
         fo->Close();
         f->cd();
 
