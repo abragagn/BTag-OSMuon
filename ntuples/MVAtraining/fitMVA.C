@@ -94,6 +94,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     float *catEdgeL;
     float *catEdgeR;
     float *catMistag;
+    float *catMistagErr;
     
     TF1 *perEvtW;
     TString perEvtWFormula;
@@ -112,7 +113,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     float evtWkde = -1.;
     float evtWkde_ext = -1.;
 
-    int nBinCheck = 20;
+    int nBinCheck = 30;
     TH1F **hMassRT[4];
     TH1F **hMassWT[4];
 
@@ -125,6 +126,8 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     
     float pass = 1./nBinCheck;  //1. = 1.-0. (mva max - mva min)
 
+
+
 //----------READ INPUT FILE AND BOOK METHODS----------
     if(mode_ == "USE")
     {
@@ -136,17 +139,19 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         ifs >> method_;
         //CAT
         ifs >> nCat;
-        catEdgeL  = new float[nCat];
-        catEdgeR  = new float[nCat];
-        catMistag = new float[nCat];
+        catEdgeL     = new float[nCat];
+        catEdgeR     = new float[nCat];
+        catMistag    = new float[nCat];
+        catMistagErr = new float[nCat];
         for(int i=0; i<nCat; ++i){
             ifs >> catEdgeL[i];
             ifs >> catEdgeR[i];
             ifs >> catMistag[i];
+            ifs >> catMistagErr[i];
         }
-        cout<<"Input categories [L-edge R-edge mistag]"<<endl;
+        cout<<"Input categories [L-edge R-edge mistag error]"<<endl;
         for(int i=0; i<nCat; ++i)
-            cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<endl;
+            cout<<catEdgeL[i]<<" "<<catEdgeR[i]<<" "<<catMistag[i]<<" "<<catMistagErr[i]<<endl;
 
         //FIT
         ifs >> perEvtWFormula;
@@ -279,7 +284,19 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     auto *mva    = new TH1F( "mva",    "mva",    nBinsMva, 0.0, 1.0 );
     auto *mva_RT = new TH1F( "mva_RT", "mva_RT", nBinsMva, 0.0, 1.0 );
     auto *mva_WT = new TH1F( "mva_WT", "mva_WT", nBinsMva, 0.0, 1.0 );
-    auto *evtMistag = new TH1F( "evtMistag", "evtMistag", 50, 0.0, 1.0 );
+    auto *htotMass    = new TH1F( "htotMass","htotMass", nBins_, min_, max_ );
+    auto *htotMass_RT = new TH1F( "htotMass_RT","htotMass_RT", nBins_, min_, max_ );
+    auto *htotMass_WT = new TH1F( "htotMass_WT","htotMass_WT", nBins_, min_, max_ );
+    auto *htotMass_Tag = new TH1F( "htotMass_Tag","htotMass_Tag", nBins_, min_, max_ );
+
+    auto *evtMistagSignal = new TH1F( "evtMistagSignal", "evtMistagSignal", 1000, 0.0, 1.0 );
+    auto *evtMistagSignal_bis = new TH1F( "evtMistagSignal_bis", "evtMistagSignal_bis", 1000, 0.0, 1.0 );
+    auto *evtMistagSignal_Cat = new TH1F( "evtMistagSignal_Cat", "evtMistagSignal_Cat", 1000, 0.0, 1.0 );
+    auto *evtMistagSignal_Fit = new TH1F( "evtMistagSignal_Fit", "evtMistagSignal_Fit", 1000, 0.0, 1.0 );
+    auto *evtMistagSide = new TH1F( "evtMistagSide", "evtMistagSide", 1000, 0.0, 1.0 );
+    float nSignal=0;
+    float nSide=0;    
+
     mva_WT->SetLineColor(kRed);
 
     vector<double> vKDERT;
@@ -289,7 +306,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     cout<<"----- BEGIN LOOP"<<endl;
 
     if(nEvents_ == -1) nEvents_ = t->GetEntries();
-    int nEventsRead = 0;
+    int nEvtsRead = 0;
     for(int i=0; i<nEvents_; ++i){
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
         t->GetEntry(i);
@@ -300,7 +317,8 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         if(HLT == "HltJpsiTrk" && !hltJpsiTrk) continue;
         if(useTightSelection && !ssbIsTight) continue;
 
-        nEventsRead++;
+        nEvtsRead = nEvtsRead + (int)evtWeight;
+        htotMass->Fill(ssbMass, evtWeight);
 
         //PRESELECTION MUON
         if(!osMuon) continue;
@@ -312,6 +330,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         bool infFlag = isinf(muoJetEnergyRatio) || isinf(muoConeEnergyRatio);
         if(nanFlag || infFlag) continue;
 
+        //SWITCH VARIABLE COMPUTATION
         absmuoEta = fabs(muoEta);
         absmuoDz = fabs(muoDz);
         muoJetConePt = muoJetPt != -1 ? muoJetPt : muoConePt;
@@ -344,13 +363,20 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
                 }
                 evtWfit = perEvtW->Eval(mvaValue);  //FIT
             }
-            evtWkde = g_pdfW->Eval(mvaValue);   //KDE
-            evtWkde_ext = g_pdfW_extended->Eval(mvaValue);  //KDE EXTENDED
+            evtWkde = g_pdfW->Eval(mvaValue, 0, "S");   //KDE
+            evtWkde_ext = g_pdfW_extended->Eval(mvaValue, 0, "S");  //KDE EXTENDED
 
             totPCat += pow(1.-2.*evtWcat, 2)*evtWeight;
             totPKde += pow(1.-2.*evtWkde ,2)*evtWeight;
 
-            evtMistag->Fill(evtWkde_ext, evtWeight);
+            if( (ssbMass>5.18) && (ssbMass<5.37) ){
+                evtMistagSignal->Fill(evtWkde_ext, evtWeight);
+                evtMistagSignal_bis->Fill(evtWkde, evtWeight);
+                evtMistagSignal_Cat->Fill(evtWcat, evtWeight);
+                evtMistagSignal_Fit->Fill(evtWfit, evtWeight);
+            }
+            else evtMistagSide->Fill(evtWkde_ext, evtWeight);
+
 
             for(int j=0;j<nBinCheck;++j){
                 if( (evtWcat>=(float)j*pass) && (evtWcat<((float)j*pass+pass)) ){
@@ -387,26 +413,47 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         }
 
         mva->Fill(mvaValue, evtWeight);
+        htotMass_Tag->Fill(ssbMass, evtWeight);
         if(osMuonTag == 1){
             mva_RT->Fill(mvaValue, evtWeight);
             vKDERT.push_back(mvaValue);
             if(evtWeight==2) vKDERT.push_back(mvaValue); //avoid using weights in kde
+            htotMass_RT->Fill(ssbMass, evtWeight);
         }
         if(osMuonTag == 0){
             mva_WT->Fill(mvaValue, evtWeight);
             vKDEWT.push_back(mvaValue);
             if(evtWeight==2) vKDEWT.push_back(mvaValue);
+            htotMass_WT->Fill(ssbMass, evtWeight);
         }
     }
 
     int nRT = mva_RT->Integral(); //Integral() take in consideration weight, GetEntries() not
     int nWT = mva_WT->Integral();
 
+    if(file_.Contains("Data")){ //for data fit mass
+        nRT = CountEventsWithFit(htotMass_RT, "histTotMass_RT").first;
+        nWT = CountEventsWithFit(htotMass_WT, "histTotMass_WT").first;
+        nEvtsRead = CountEventsWithFit(htotMass, "histTotMass").first;
+    }
+
     cout<<"----- MVA HISTOGRAMS FILLED"<<endl;
     cout<<"nRT "<<nRT<<endl;
     cout<<"nWT "<<nWT<<endl;
 
-//----------USE----------
+    cout<<endl<<"Base Eff = "<<100.*(float)(nRT+nWT)/nEvtsRead<<"%"<<endl;
+    cout<<"Base W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
+    cout<<"Base P = "<<100.*((float)(nRT+nWT)/nEvtsRead)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
+
+    if(file_.Contains("MC")){
+        cout<<endl<<"Cat P = "<<100.*totPCat/(float)nEvtsRead<<"%"<<endl;
+        cout<<"KDE P = "<<100.*totPKde/(float)nEvtsRead<<"%"<<endl;
+    }else if(file_.Contains("Data")){
+        totPCat = 0.;
+        totPKde = 0.;
+    }
+
+//----------VALIDATION OF THE METHOD----------
     if(mode_ == "USE"){
         for(int i=0; i<4; ++i){
             for(int j=0;j<nBinCheck;++j){
@@ -461,22 +508,32 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
                 }
 
                 errMistag =  sqrt(pow(nMassWT.first,2)*pow(errRT,2) + pow(nMassRT.first,2)*pow(errWT,2)  )/pow(nMassRT.first + nMassWT.first, 2);
-
                 vEY.push_back(errMistag);
 
-                cout<<"BIN "<<j<<", wCalc "<<wCalc[i][j]<<", nRT "<<nMassRT.first<<"+-"<<errRT<<", nWT "<<nMassWT.first<<"+-"<<errWT<<", wMeas "<<nMassWT.first/(nMassWT.first + nMassRT.first);
+                if(file_.Contains("Data") && i==0){ //category tagging performance evaluation
+                    totPCat += (nMassRT.first + nMassWT.first)*pow(1-2*wCalc[i][j],2);
+                }
+
+                if(file_.Contains("Data") && i==3){ //KDE tagging performance evaluation
+                    totPKde += (nMassRT.first + nMassWT.first)*pow(1-2*wCalc[i][j],2);
+                }
+
+                cout<<"BIN "<<j<<", wCalc "<<wCalc[i][j]<<", nRT "<<nMassRT.first<<"+-"<<errRT<<", nWT "<<nMassWT.first<<"+-"<<errWT;
+                cout<<", wMeas "<<nMassWT.first/(nMassWT.first + nMassRT.first);
                 cout<<" +- "<<errMistag<<endl;
+
             }
 
             auto *grW = new TGraphErrors(vX.size(),&vX[0],&vY[0],0,&vEY[0]);
-            //auto *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,1.);
+            //auto *fCheck = new TF1("fCheck","[0]+[1]*(x-[2])",0.,1.); //alternative form from previous analysis
             //fCheck->FixParameter(2, avgW);
             auto *fCheck = new TF1("fCheck","[0]+[1]*x",0.,1.);
-            fCheck->SetParameter(0, avgW);
-            fCheck->SetParameter(1, 1);
+            fCheck->SetParameters(avgW, 1);
 
             grW->Fit("fCheck");
             auto *myfunc = grW->GetFunction("fCheck");
+            auto *fitDraw = new TF1("fitDraw","[0]+[1]*x",0.,.5);
+            fitDraw->SetParameters(myfunc->GetParameter(0), myfunc->GetParameter(1));
 
             vector<float> wResY;
             vector<float> wResEY;
@@ -495,14 +552,17 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             grW->SetMarkerSize(1);
             grW->SetMaximum(1.);
             grW->SetMinimum(0);
+            grW->GetXaxis()->SetLimits(0.0,0.9);
             grW->SetTitle("");
             grW->GetXaxis()->SetTitle("w calc.");
             grW->GetYaxis()->SetTitle("w meas.");
 
-            grW->Draw("APZ SAME");
+            grW->Draw("APZ");
+            fitDraw->Draw("same");
             c30->cd(2);
             grWres->SetMarkerStyle(20);
             grWres->SetMarkerSize(1);
+            grWres->GetXaxis()->SetLimits(0.0,0.9);
             grWres->Draw("APZ");
             grWres->SetTitle("");
             grWres->GetYaxis()->SetTitle("# std dev");
@@ -510,51 +570,29 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             y0_->SetLineColor(kBlack);
             y0_->Draw("SAME");
 
-/*            auto *y1_ = new TF1("","1.",0.,1.);
-            auto *y1__ = new TF1("","-1.",0.,1.);
-            auto *y2_ = new TF1("","2.",0.,1.);
-            auto *y2__ = new TF1("","-2.",0.,1.);
-            auto *y3_ = new TF1("","3.",0.,1.);
-            auto *y3__ = new TF1("","-3.",0.,1.);
-            y1_->SetLineColor(kGreen);
-            y1__->SetLineColor(kGreen);
-            y2_->SetLineColor(kOrange);
-            y2__->SetLineColor(kOrange);
-            y3_->SetLineColor(kRed);
-            y3__->SetLineColor(kRed);
-            y1_->SetLineWidth(1);
-            y1__->SetLineWidth(1);
-            y2_->SetLineWidth(1);
-            y2__->SetLineWidth(1);
-            y3_->SetLineWidth(1);
-            y3__->SetLineWidth(1);
-            y1_->SetLineStyle(2);
-            y1__->SetLineStyle(2);
-            y2_->SetLineStyle(2);
-            y2__->SetLineStyle(2);
-            y3_->SetLineStyle(2);
-            y3__->SetLineStyle(2);
-            y1_->Draw("SAME");
-            y1__->Draw("SAME");
-            y2_->Draw("SAME");
-            y2__->Draw("SAME");
-            y3_->Draw("SAME");
-            y3__->Draw("SAME");
-*/
             c30->Print(dirPath_ + "/" + "validation" + process_ + HLT + TString::Format("_TYPE%i.pdf", i));
 
             float p0 = myfunc->GetParameter(0);
             float p1 = myfunc->GetParameter(0);
-
-            //cout<<myfunc->GetParameter(0)-myfunc->GetParameter(1)*avgW<<" +- "<<sqrt(pow(myfunc->GetParError(0),2) + pow(avgW,2)*pow(myfunc->GetParError(1),2) )<<endl<<endl;
-
         }
 
         auto *c32 = new TCanvas();
-        evtMistag->DrawCopy("hist");
+        c32->Divide(2,2);
+        c32->cd(1);
+        g_pdfW_extended->Draw("APC");
+        c32->cd(2);
+        evtMistagSignal_Fit->DrawCopy("hist");
+        c32->cd(3);
+        evtMistagSignal_bis->DrawCopy("hist");
+        c32->cd(4);
+        evtMistagSignal->DrawCopy("hist");
         c32->Print(dirPath_ + "/" + "perEvtMistagHist" + process_ + HLT + ".pdf");
     }
 
+    if(file_.Contains("Data")){
+        cout<<endl<<"Cat P = "<<100.*totPCat/(float)nEvtsRead<<"%"<<endl;
+        cout<<"KDE P = "<<100.*totPKde/(float)nEvtsRead<<"%"<<endl;
+    }
 //----------CREATE----------
     if(mode_ == "CREATE")
     {
@@ -563,7 +601,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         sort(vKDEWT.begin(), vKDEWT.end());
         float xMin = min(vKDERT[0], vKDEWT[0]);
         float xMax = max(vKDERT[vKDERT.size()-1], vKDEWT[vKDEWT.size()-1]);
-        float rho = .5;
+        float rho = 1.;
         cout<<"rho "<<rho<<endl;
         cout<<"xMin "<<xMin<<endl;
         cout<<"xMax "<<xMax<<endl;
@@ -572,6 +610,8 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             "KernelType:Gaussian;Iteration:Adaptive;Mirror:NoMirror;Binning:RelaxedBinning", rho);
         auto *kdeWT = new TKDE(vKDEWT.size(), &vKDEWT[0], 0., 1., 
             "KernelType:Gaussian;Iteration:Adaptive;Mirror:NoMirror;Binning:RelaxedBinning", rho);
+
+        cout<<"----- KDE COMPUTED"<<endl;
 
         //plotting
         auto *pdfRT = new TF1("pdfRT",kdeRT,0.,1.,0);
@@ -615,8 +655,12 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             }, 
             0.,1.,0);
 
-        pdfW->SetNpx(100); //number of points to build the TGraph 
-        pdfW_extended->SetNpx(100);
+        cout<<"----- KDE LAMBDA FUNCTIONS COMPUTED"<<endl;
+
+        int nPoints = 300;//number of points to build the TGraph 
+
+        pdfW->SetNpx(nPoints); 
+        pdfW_extended->SetNpx(nPoints);
         auto *out_pdfW = new TGraph(pdfW);
         auto *out_pdfW_extended = new TGraph(pdfW_extended);
 
@@ -624,12 +668,12 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         pdfW_extended->SetMarkerStyle(20);
         pdfW_extended->SetLineColor(kBlue);
         pdfW_extended->SetMarkerSize(.5);
-        pdfW_extended->SetNpx(100);
         pdfW_extended->DrawClone("PL");
         pdfW->SetMarkerStyle(20);
         pdfW->SetMarkerSize(1.);
-        pdfW->SetNpx(100);
         pdfW->DrawClone("P SAME");
+
+        cout<<"----- KDE TGRAPHS COMPUTED"<<endl;
 
         //----------CATEGORIES----------
         nCat = 25;
@@ -647,6 +691,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         int     *catWT      = new int[nCat];
         float   *catEff     = new float[nCat];
         float   *catW       = new float[nCat];
+        float   *catWerr    = new float[nCat];
         float   *catP       = new float[nCat];
 
         float   *vexl = new float[nCat];
@@ -693,10 +738,11 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
         for(int i=0; i<nCat; ++i)
         {
-            catEff[i] = (float)(catWT[i] + catRT[i]) / (float)nEventsRead;
+            catEff[i] = (float)(catWT[i] + catRT[i]) / (float)nEvtsRead;
             totEff += catEff[i];
 
             catW[i] = (float)catWT[i] / (float)(catWT[i] + catRT[i]);
+            catWerr[i] = sqrt(pow((float)catWT[i],2)*pow(sqrt((float)catRT[i]),2) + pow((float)catRT[i],2)*pow(sqrt((float)catWT[i]),2)  )/pow((float)catRT[i] + (float)catWT[i], 2);
             avgD += catEff[i]*(1-2*catW[i]);
 
             catP[i] = catEff[i]*pow(1-2*catW[i],2);
@@ -747,7 +793,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
             if(i!=0) ofs<<catEdge[i-1];
             else     ofs<<0.;
             ofs<<" "<<catEdge[i]<<" ";
-            ofs<<catW[i]<<endl;
+            ofs<<catW[i]<<" "<<catWerr[i]<<endl;
         }
         //FUNCTION
         ofs<<perEvtWFormula<<endl;
@@ -783,10 +829,10 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         pdfW_extended->DrawClone("");
         gr->SetMarkerStyle(20);
         gr->SetMarkerSize(.5);
-        gr->SetTitle("per-event mistag");
+        gr->GetYXaxis()->SetTitle("per-event mistag");
         gr->GetXaxis()->SetTitle("MVA output");
         gr->SetMinimum(0.);
-        gr->Draw("PE SAME");
+        gr->Draw("APE SAME");
         grAsy->Draw("E SAME");
         pdfW->SetLineColor(kGreen);
         pdfW->DrawClone("P SAME");
@@ -797,13 +843,6 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         c2->Print("mvaDistributions" + process_ + HLT + ".pdf");
         c3->Print("perEventW" + process_ + HLT + ".pdf");
     }
-
-    cout<<endl<<"Base Eff = "<<100.*(float)(nRT+nWT)/nEventsRead<<"%"<<endl;
-    cout<<"Base W = "<<100.*(float)nWT/(nRT+nWT)<<"%"<<endl;
-    cout<<"Base P = "<<100.*((float)(nRT+nWT)/nEventsRead)*pow(1.-2.*((float)nWT/(nRT+nWT)),2)<<"%"<<endl;
-
-    cout<<endl<<"Cat P = "<<100.*totPCat/(float)nEventsRead<<"%"<<endl;
-    cout<<"KDE P = "<<100.*totPKde/(float)nEventsRead<<"%"<<endl;
 
     f->Close();
     delete f;
@@ -864,8 +903,6 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
         func->SetParameter(10, 5);
         func->SetParLimits(7, 0, bkgHeight*2);
         func->SetParLimits(8, 0, hist->GetBinContent(1));
-        //func->SetParLimits(9, 10, 1e3);
-        //func->SetParLimits(10, 5.0, mean);
     }
 
     func->SetNpx(2000);
@@ -873,7 +910,7 @@ pair<float, float> CountEventsWithFit(TH1 *hist, TString name = "hist"){
     auto c5 = new TCanvas();
     hist->SetMarkerStyle(20);
     hist->SetMarkerSize(.75);
-    TFitResultPtr r = hist->Fit("func","MRLQS");
+    TFitResultPtr r = hist->Fit("func","MRLS");
     hist->Draw("PE");
     hist->SetMinimum(0);
 
