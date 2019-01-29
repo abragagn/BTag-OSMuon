@@ -65,7 +65,7 @@ class PDAnalyzer: public virtual PDAnalyzerUtil
     double ptCut; //needed for paolo's code for unknow reasons
 
     //PARAMETERS
-    bool verbose, useHLT;
+    bool verbose, useHLT, writeVars;
     TString outputFile;
     float muonIdWpBarrel, muonIdWpEndcap;
     TString process;

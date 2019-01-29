@@ -36,6 +36,7 @@ PDAnalyzer::PDAnalyzer() {
 
     setUserParameter( "process", "BsJPsiPhi" );
     setUserParameter( "useHLT", "false" );
+    setUserParameter( "writeVars", "true" );
 
     setUserParameter( "outputFile", "ntu.root" );
 
@@ -43,7 +44,7 @@ PDAnalyzer::PDAnalyzer() {
     setUserParameter( "muonIdWpEndcap", "0.00" ); 
 
     setUserParameter( "muonMvaMethod",      "BDTMuonID2017woIPwIso" ); 
-    setUserParameter( "osMuonTagMvaMethod", "BDTOsMuon2016Jet" ); 
+    setUserParameter( "osMuonTagMvaMethod", "DNNOsMuonHLTJpsiMu_test241" ); 
 
     setUserParameter( "ptCut", "40.0" ); //needed for paolo's code for unknow reasons
 
@@ -68,6 +69,7 @@ void PDAnalyzer::beginJob() {
 
     getUserParameter( "process", process );
     getUserParameter( "useHLT", useHLT );
+    getUserParameter( "writeVars", writeVars );
 
     getUserParameter( "outputFile", outputFile );
 
@@ -86,7 +88,7 @@ void PDAnalyzer::beginJob() {
     setOsMuonCuts(muonIdWpBarrel, muonIdWpEndcap, 1. );
 
     inizializeMuonMvaReader( muonMvaMethod );
-    //inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
+    inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
@@ -129,10 +131,10 @@ void PDAnalyzer::book() {
     hmass_ssB_osWC  = new TH1D( "hmass_ssB_osWC", "hmass_ssB_osWC", nbin, min, max );
 
     autoSavedObject =
-    hTest   = new TH1D( "hTest", "hTest", 5, 0, 5 );
+    hTest   = new TH1D( "hTest", "hTest", 100, 0, 1 );
 
     autoSavedObject =
-    hTest2   = new TH1D( "hTest2", "hTest2", 500, -0.3, 0.3 );
+    hTest2   = new TH1D( "hTest2", "hTest2", 100, 0, 1 );
 
     return;
 
@@ -189,6 +191,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrkTrk_Displaced_v)) jpsitktk =  true;
     if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
 
+    if( !jpsimu ) return false;
     if( jpsimu ) SetJpsiMuCut();
     if( !jpsimu ) SetJpsiTrkTrkCut();
 
@@ -309,7 +312,9 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }
 
     (tWriter->osMuon) = 1;
-    //(tWriter->osMuonTagMvaValue) = getOsMuonTagMvaValue();
+    float osMuonTagMvaValue = getOsMuonTagMvaValue();
+    (tWriter->osMuonTagMvaValue) = osMuonTagMvaValue;
+
     //(tWriter->osMuonTagMistag) = 
 
     hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
@@ -317,14 +322,15 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if( TMath::Sign(1, ssBLund) == tagDecision ){ 
         hmass_ssB_osRT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 1 ;
+        hTest->Fill(osMuonTagMvaValue);
     }
 
     if( TMath::Sign(1, ssBLund) != tagDecision ){
         hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 0 ;
+        hTest2->Fill(osMuonTagMvaValue);
     }
 
-    //COMPLEX TAGGING VARIABLES
     //INDICES
     int iMuon = bestMuIndex;
     int itkmu = muonTrack( iMuon, PDEnumString::muInner );
@@ -338,187 +344,186 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         muoAncestor = GetAncestor( genMuIndex, &ListB ); 
     }
 
-    //Cone
-    float kappa = 1;
-    float drCharge = 0.4;
+    //COMPLEX TAGGING VARIABLES
+    if(writeVars){
+        float kappa = 1;
+        float drCharge = 0.4;
 
-    //JET variables
-    int iJet = trkJet->at(itkmu);
-    if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
-    TVector3 vMu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
+        //JET variables
+        int iJet = trkJet->at(itkmu);
+        if(iJet<0 && trkPFC->at(itkmu)>=0) iJet=pfcJet->at(trkPFC->at(itkmu));  
+        TVector3 vMu(muoPx->at(iMuon), muoPy->at(iMuon), muoPz->at(iMuon));
 
-    float muoJetPtRel = -1;
-    float muoJetDr = -1;
-    float muoJetEnergyRatio = -1;
-    float muoJetCSV = -1;
-    float muoJetDFprob = -1;
-    float muoJetSize = -1;
-    float muoJetQ = -1;
-    float muoJetPt = -1;
+        float muoJetPtRel = -1;
+        float muoJetDr = -1;
+        float muoJetEnergyRatio = -1;
+        float muoJetCSV = -1;
+        float muoJetDFprob = -1;
+        float muoJetSize = -1;
+        float muoJetQ = -1;
+        float muoJetPt = -1;
 
-    if(iJet>=0){
-        vector <int> jet_pfcs = pfCandFromJet( iJet );
-        TVector3 vJet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
-        muoJetPt = jetPt->at(iJet);
-        muoJetDr = deltaR(jetEta->at(iJet), jetPhi->at(iJet), muoEta->at( iMuon ), muoPhi->at(iMuon));
-        muoJetEnergyRatio = muoE->at(iMuon) / jetE->at(iJet);
-        vJet -= vMu;
-        muoJetPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vJet.Unit());
-        muoJetSize = jet_pfcs.size();
-        muoJetQ = GetJetCharge(iJet, kappa);
-        muoJetQ *= trkCharge->at(itkmu); 
-        muoJetCSV = jetCSV->at(iJet);
-        muoJetDFprob = GetJetProbb(iJet);
-    }
-
-    //SVT variables
-
-    int osSvt = GetBestSvtFromTrack(itkmu);
-
-    float muoSvtPtRel = -1;
-    float muoSvtDr = -1;
-    float muoSvtEnergyRatio = -1;
-    float muoSvtCSV = -1;
-    float muoSvtDFprob = -1;
-    float muoSvtSize = -1;
-    float muoSvtQ = -1;
-    float muoSvtPt = -1;
-
-    if(osSvt>=0){
-        vector <int> tkSvt = tracksFromSV(osSvt);
-        TVector3 vSvt;
-        for(auto it:tkSvt){
-            TVector3 v;
-            v.SetXYZ(trkPx->at(it), trkPy->at(it), trkPz->at(it));
-            vSvt += v;
+        if(iJet>=0){
+            vector <int> jet_pfcs = pfCandFromJet( iJet );
+            TVector3 vJet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
+            muoJetPt = jetPt->at(iJet);
+            muoJetDr = deltaR(jetEta->at(iJet), jetPhi->at(iJet), muoEta->at( iMuon ), muoPhi->at(iMuon));
+            muoJetEnergyRatio = muoE->at(iMuon) / jetE->at(iJet);
+            vJet -= vMu;
+            muoJetPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vJet.Unit());
+            muoJetSize = jet_pfcs.size();
+            muoJetQ = GetJetCharge(iJet, kappa);
+            muoJetQ *= trkCharge->at(itkmu); 
+            muoJetCSV = jetCSV->at(iJet);
+            muoJetDFprob = GetJetProbb(iJet);
         }
-        muoSvtPt = vSvt.Pt();
-        muoSvtDr = deltaR(vSvt.Eta(), vSvt.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-        muoSvtEnergyRatio = -1;
-        muoSvtCSV = -1;
-        muoSvtDFprob = -1;
-        vSvt -= vMu;
-        muoSvtPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vSvt.Unit());
-        muoSvtSize = svtNTracks->at(osSvt);
-        muoSvtQ = GetSvtCharge(osSvt, kappa);
-        muoSvtQ *= trkCharge->at(itkmu);
-    }
 
-    //CONE variables
-    float muoConePtRel = -1;
-    float muoConeDr = -1;
-    float muoConeEnergyRatio = -1;
-    float muoConeCSV = -1;
-    float muoConeDFprob = -1;
-    float muoConeSize = 0;
-    float muoConeQ = -1;
-    float muoConePt = -1;
+        //SVT variables
 
-    TLorentzVector tCone, tMu;
-    tCone.SetPtEtaPhiM(0.,0.,0.,0.);
-    tMu.SetPtEtaPhiM(muoPt->at( iMuon ), muoEta->at( iMuon ), muoPhi->at( iMuon ), MassMu);
-    float qCone=0, ptCone=0;
+        int osSvt = GetBestSvtFromTrack(itkmu);
 
-    for(int ipf=0; ipf<nPF; ++ipf){
-        float pfpfc = pfcPt->at(ipf);
-        float etapfc = pfcEta->at(ipf);
-        if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
-        if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
-        if(pfpfc < 0.2) continue;
-        if(fabs(etapfc) > 2.5) continue;        
-        TLorentzVector a;
-        a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
-        tCone += a;
-        ++muoConeSize;
-        qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
-        ptCone += pow(pfpfc, kappa);
-    }
+        float muoSvtPtRel = -1;
+        float muoSvtDr = -1;
+        float muoSvtEnergyRatio = -1;
+        float muoSvtCSV = -1;
+        float muoSvtDFprob = -1;
+        float muoSvtSize = -1;
+        float muoSvtQ = -1;
+        float muoSvtPt = -1;
 
-    if(ptCone != 0) qCone /= ptCone;
-    else qCone = 1;
-    qCone *= trkCharge->at(itkmu);
-
-    muoConePt = tCone.Pt();
-    muoConeDr = deltaR(tCone.Eta(), tCone.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-    muoConeEnergyRatio = muoE->at(iMuon) / tCone.E();
-    muoConeCSV = -1;
-    muoConeDFprob = -1;
-    tCone -= tMu;
-    muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
-    muoConeQ = qCone;
-
-    bool debugJet = false;
-
-    if(debugJet && muoAncestor>=0 && iJet>=0){
-
-        vector <int> jet_pfcs = pfCandFromJet( iJet );
-        cout<<endl;
-        printDaughterTree(muoAncestor, "");
-        cout<<endl;
-
-        cout<<"dXY = "<<GetSignedDxy(iMuon, iSsPV)<<endl;
-        cout<<"osB: "<<genPt->at( muoAncestor )<<" "<<genEta->at( muoAncestor )<<" "<<genPhi->at( muoAncestor )<<endl;
-        cout<<"jet: "<<jetPt->at( iJet )<<" "<<jetEta->at( iJet )<<" "<<jetPhi->at( iJet )<<endl;
-        cout<<"muo: "<<muoPt->at( iMuon )<<" "<<muoEta->at( iMuon )<<" "<<muoPhi->at( iMuon )<<endl;
-
-        
-        for(int it:jet_pfcs){
-            int g = GetClosestGen( pfcEta->at(it), pfcPhi->at(it), pfcPt->at(it) );
-            if(g>=0) cout<<genId->at(g)<<" "; else cout<<"noGen ";
+        if(osSvt>=0){
+            vector <int> tkSvt = tracksFromSV(osSvt);
+            TVector3 vSvt;
+            for(auto it:tkSvt){
+                TVector3 v;
+                v.SetXYZ(trkPx->at(it), trkPy->at(it), trkPz->at(it));
+                vSvt += v;
+            }
+            muoSvtPt = vSvt.Pt();
+            muoSvtDr = deltaR(vSvt.Eta(), vSvt.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
+            muoSvtEnergyRatio = -1;
+            muoSvtCSV = -1;
+            muoSvtDFprob = -1;
+            vSvt -= vMu;
+            muoSvtPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vSvt.Unit());
+            muoSvtSize = svtNTracks->at(osSvt);
+            muoSvtQ = GetSvtCharge(osSvt, kappa);
+            muoSvtQ *= trkCharge->at(itkmu);
         }
-        cout<<endl;
 
-        hTest->Fill(GetSignedDxy(iMuon, iSsPV));
-        hTest2->Fill( fabs(dXY( itkmu, pvtX->at(iSsPV), pvtY->at(iSsPV) )) * dSign(itkmu, jetPx->at( iJet ), jetPy->at( iJet ), pvtX->at(iSsPV), pvtY->at(iSsPV)) );
+        //CONE variables
+        float muoConePtRel = -1;
+        float muoConeDr = -1;
+        float muoConeEnergyRatio = -1;
+        float muoConeCSV = -1;
+        float muoConeDFprob = -1;
+        float muoConeSize = 0;
+        float muoConeQ = -1;
+        float muoConePt = -1;
+
+        TLorentzVector tCone, tMu;
+        tCone.SetPtEtaPhiM(0.,0.,0.,0.);
+        tMu.SetPtEtaPhiM(muoPt->at( iMuon ), muoEta->at( iMuon ), muoPhi->at( iMuon ), MassMu);
+        float qCone=0, ptCone=0;
+
+        for(int ipf=0; ipf<nPF; ++ipf){
+            float pfpfc = pfcPt->at(ipf);
+            float etapfc = pfcEta->at(ipf);
+            if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
+            if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
+            if(pfpfc < 0.2) continue;
+            if(fabs(etapfc) > 2.5) continue;        
+            TLorentzVector a;
+            a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
+            tCone += a;
+            ++muoConeSize;
+            qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
+            ptCone += pow(pfpfc, kappa);
+        }
+
+        if(ptCone != 0) qCone /= ptCone;
+        else qCone = 1;
+        qCone *= trkCharge->at(itkmu);
+
+        muoConePt = tCone.Pt();
+        muoConeDr = deltaR(tCone.Eta(), tCone.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
+        muoConeEnergyRatio = muoE->at(iMuon) / tCone.E();
+        muoConeCSV = -1;
+        muoConeDFprob = -1;
+        tCone -= tMu;
+        muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
+        muoConeQ = qCone;
+
+        bool debugJet = false;
+
+        if(debugJet && muoAncestor>=0 && iJet>=0){
+
+            vector <int> jet_pfcs = pfCandFromJet( iJet );
+            cout<<endl;
+            printDaughterTree(muoAncestor, "");
+            cout<<endl;
+
+            cout<<"dXY = "<<GetSignedDxy(iMuon, iSsPV)<<endl;
+            cout<<"osB: "<<genPt->at( muoAncestor )<<" "<<genEta->at( muoAncestor )<<" "<<genPhi->at( muoAncestor )<<endl;
+            cout<<"jet: "<<jetPt->at( iJet )<<" "<<jetEta->at( iJet )<<" "<<jetPhi->at( iJet )<<endl;
+            cout<<"muo: "<<muoPt->at( iMuon )<<" "<<muoEta->at( iMuon )<<" "<<muoPhi->at( iMuon )<<endl;
+
+            
+            for(int it:jet_pfcs){
+                int g = GetClosestGen( pfcEta->at(it), pfcPhi->at(it), pfcPt->at(it) );
+                if(g>=0) cout<<genId->at(g)<<" "; else cout<<"noGen ";
+            }
+            cout<<endl;
+        }
+
+        //------------------------------------------------FILLING------------------------------------------------
+        (tWriter->muoPt) = muoPt->at( iMuon );
+        (tWriter->muoEta) = muoEta->at( iMuon );
+        (tWriter->muoPhi) = muoPhi->at(iMuon);
+        (tWriter->muoCharge) = trkCharge->at(itkmu);
+
+        (tWriter->muoDxy) = GetSignedDxy(iMuon, iSsPV);
+        (tWriter->muoDz) = dZ(itkmu, iSsPV);
+        (tWriter->muoExy) = trkExy->at(itkmu);
+        (tWriter->muoEz) = trkEz->at(itkmu);
+
+        (tWriter->muoSoftMvaValue) = computeMuonMva(iMuon);
+
+        (tWriter->muoLund) = muoLund;
+        (tWriter->muoAncestor) = muoAncestor; 
+
+        (tWriter->muoDrB) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
+        (tWriter->muoPFIso) = GetMuoPFiso(iMuon);
+
+        (tWriter->muoJetPt) = muoJetPt;
+        (tWriter->muoJetPtRel) = muoJetPtRel;
+        (tWriter->muoJetDr) = muoJetDr;
+        (tWriter->muoJetEnergyRatio) = muoJetEnergyRatio;
+        (tWriter->muoJetQ) = muoJetQ;
+        (tWriter->muoJetCSV) = muoJetCSV;
+        (tWriter->muoJetDFprob) = muoJetDFprob;
+        (tWriter->muoJetSize) = muoJetSize;
+
+        (tWriter->muoHowMany) = getNosMuons();
+
+        (tWriter->muoSvtPt)  = muoSvtPt;
+        (tWriter->muoSvtPtRel) = muoSvtPtRel;
+        (tWriter->muoSvtDr) = muoSvtDr;
+        (tWriter->muoSvtEnergyRatio) = muoSvtEnergyRatio;
+        (tWriter->muoSvtQ) = muoSvtQ;
+        (tWriter->muoSvtCSV) = muoSvtCSV;
+        (tWriter->muoSvtDFprob) = muoSvtDFprob;
+        (tWriter->muoSvtSize) = muoSvtSize;
+
+        (tWriter->muoConePt) = muoConePt;
+        (tWriter->muoConePtRel) = muoConePtRel;
+        (tWriter->muoConeDr) = muoConeDr;
+        (tWriter->muoConeEnergyRatio) = muoConeEnergyRatio;
+        (tWriter->muoConeQ) = muoConeQ;
+        (tWriter->muoConeCSV) = muoConeCSV;
+        (tWriter->muoConeDFprob) = muoConeDFprob;
+        (tWriter->muoConeSize) = muoConeSize;
     }
-
-    //------------------------------------------------FILLING------------------------------------------------
-    (tWriter->muoPt) = muoPt->at( iMuon );
-    (tWriter->muoEta) = muoEta->at( iMuon );
-    (tWriter->muoPhi) = muoPhi->at(iMuon);
-    (tWriter->muoCharge) = trkCharge->at(itkmu);
-
-    (tWriter->muoDxy) = GetSignedDxy(iMuon, iSsPV);
-    (tWriter->muoDz) = dZ(itkmu, iSsPV);
-    (tWriter->muoExy) = trkExy->at(itkmu);
-    (tWriter->muoEz) = trkEz->at(itkmu);
-
-    (tWriter->muoSoftMvaValue) = computeMuonMva(iMuon);
-
-    (tWriter->muoLund) = muoLund;
-    (tWriter->muoAncestor) = muoAncestor; 
-
-    (tWriter->muoDrB) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
-    (tWriter->muoPFIso) = GetMuoPFiso(iMuon);
-
-    (tWriter->muoJetPt) = muoJetPt;
-    (tWriter->muoJetPtRel) = muoJetPtRel;
-    (tWriter->muoJetDr) = muoJetDr;
-    (tWriter->muoJetEnergyRatio) = muoJetEnergyRatio;
-    (tWriter->muoJetQ) = muoJetQ;
-    (tWriter->muoJetCSV) = muoJetCSV;
-    (tWriter->muoJetDFprob) = muoJetDFprob;
-    (tWriter->muoJetSize) = muoJetSize;
-
-    (tWriter->muoHowMany) = getNosMuons();
-
-    (tWriter->muoSvtPt)  = muoSvtPt;
-    (tWriter->muoSvtPtRel) = muoSvtPtRel;
-    (tWriter->muoSvtDr) = muoSvtDr;
-    (tWriter->muoSvtEnergyRatio) = muoSvtEnergyRatio;
-    (tWriter->muoSvtQ) = muoSvtQ;
-    (tWriter->muoSvtCSV) = muoSvtCSV;
-    (tWriter->muoSvtDFprob) = muoSvtDFprob;
-    (tWriter->muoSvtSize) = muoSvtSize;
-
-    (tWriter->muoConePt) = muoConePt;
-    (tWriter->muoConePtRel) = muoConePtRel;
-    (tWriter->muoConeDr) = muoConeDr;
-    (tWriter->muoConeEnergyRatio) = muoConeEnergyRatio;
-    (tWriter->muoConeQ) = muoConeQ;
-    (tWriter->muoConeCSV) = muoConeCSV;
-    (tWriter->muoConeDFprob) = muoConeDFprob;
-    (tWriter->muoConeSize) = muoConeSize;
 
     //------------------------------------------------TAG------------------------------------------------
 
@@ -552,17 +557,31 @@ void PDAnalyzer::endJob() {
 
     cout<<"-----TAG RESULTS-----"<<endl;
 
-    float eff = CountEventsWithFit(hmass_ssB_os, process) / CountEventsWithFit(hmass_ssB, process);
-    float w  = CountEventsWithFit(hmass_ssB_osWT, process) / CountEventsWithFit(hmass_ssB_os, process);
-    float power = eff*pow(1-2*w, 2);
+    if(use_gen){
+        float eff = hmass_ssB_os->Integral() / hmass_ssB->Integral();
+        float w  = hmass_ssB_osWT->Integral() / hmass_ssB_os->Integral();
+        float power = eff*pow(1-2*w, 2);
+        float tot = hmass_ssB_osCC->Integral() + hmass_ssB_osWC->Integral() + hmass_ssB_osRC->Integral();
 
-    float tot = CountEventsWithFit(hmass_ssB_osCC, process ) + CountEventsWithFit(hmass_ssB_osWC, process) + CountEventsWithFit(hmass_ssB_osRC, process);
+        cout<<"CC   WC  RC"<<endl;
+        cout<< hmass_ssB_osCC->Integral()/tot<<" "<< hmass_ssB_osWC->Integral()/tot<<" "<< hmass_ssB_osRC->Integral()/tot<<endl<<endl;
 
-    cout<<"CC   WC  RC"<<endl;
-    cout<< CountEventsWithFit(hmass_ssB_osCC, process)/tot<<" "<< CountEventsWithFit(hmass_ssB_osWC, process)/tot<<" "<< CountEventsWithFit(hmass_ssB_osRC, process)/tot<<endl<<endl;
+        cout<<"#B    eff%    w%    P%"<<endl;
+        cout<< hmass_ssB->Integral()<<" "<<eff*100<<" "<<w*100<<" "<<power*100<<endl;
+    }else{
+        float eff = CountEventsWithFit(hmass_ssB_os, process) / CountEventsWithFit(hmass_ssB, process);
+        float w  = CountEventsWithFit(hmass_ssB_osWT, process) / CountEventsWithFit(hmass_ssB_os, process);
+        float power = eff*pow(1-2*w, 2);
+        float tot = CountEventsWithFit(hmass_ssB_osCC, process ) + CountEventsWithFit(hmass_ssB_osWC, process) + CountEventsWithFit(hmass_ssB_osRC, process);
 
-    cout<<"#B    eff%    w%    P%"<<endl;
-    cout<< CountEventsWithFit(hmass_ssB, process)<<" "<<eff*100<<" "<<w*100<<" "<<power*100<<endl;
+        cout<<"CC   WC  RC"<<endl;
+        cout<< CountEventsWithFit(hmass_ssB_osCC, process)/tot<<" "<< CountEventsWithFit(hmass_ssB_osWC, process)/tot<<" "<< CountEventsWithFit(hmass_ssB_osRC, process)/tot<<endl<<endl;
+
+        cout<<"#B    eff%    w%    P%"<<endl;
+        cout<< CountEventsWithFit(hmass_ssB, process)<<" "<<eff*100<<" "<<w*100<<" "<<power*100<<endl;
+    }
+
+
 
     return;
 }
