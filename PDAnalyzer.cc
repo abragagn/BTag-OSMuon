@@ -167,6 +167,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 // additional features
     computeMuonVar();
+    inizializeTagVariables();
     tWriter->Reset();
     convSpheCart(jetPt, jetEta, jetPhi, jetPx, jetPy, jetPz);
     convSpheCart(muoPt, muoEta, muoPhi, muoPx, muoPy, muoPz);
@@ -404,7 +405,6 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }
 
     //CONE variables
-
     float muoConePtRel = -1;
     float muoConeDr = -1;
     float muoConeEnergyRatio = -1;

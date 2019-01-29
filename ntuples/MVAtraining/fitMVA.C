@@ -158,7 +158,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         //FIT
         auto *f2 = new TFile("OSMuonTagger" + HLT + "Functions.root");
         f2->cd();
-        perEvtW = (TF1*)f2->Get("fitErf")
+        perEvtW = (TF1*)f2->Get("fitErf");
         g_pdfW = (TGraph*)f2 ->Get("pdfW");
         g_pdfW_extended = (TGraph*)f2 ->Get("pdfW_extended");
         f2->Close();
@@ -646,7 +646,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
         cout<<"----- KDE LAMBDA FUNCTIONS COMPUTED"<<endl;
 
-        int nPoints = 300;//number of points to build the TGraph 
+        int nPoints = 200;//number of points to build the TGraph 
 
         pdfW->SetNpx(nPoints); 
         pdfW_extended->SetNpx(nPoints);
@@ -815,7 +815,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
         pdfW_extended->DrawClone("");
         gr->SetMarkerStyle(20);
         gr->SetMarkerSize(.5);
-        gr->GetYXaxis()->SetTitle("per-event mistag");
+        gr->GetYaxis()->SetTitle("per-event mistag");
         gr->GetXaxis()->SetTitle("MVA output");
         gr->SetMinimum(0.);
         gr->Draw("APE SAME");
