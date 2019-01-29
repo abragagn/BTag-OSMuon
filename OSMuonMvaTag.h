@@ -11,6 +11,7 @@
 #include "AlbertoUtil.h"
 
 #include "TString.h"
+#include "TGraph.h"
 #include "TMVA/Tools.h"
 #include "TMVA/Reader.h"
 #include "TMVA/PyMethodBase.h"
@@ -23,16 +24,20 @@ public:
     OSMuonMvaTag();
     ~OSMuonMvaTag();
 
+    void    inizializeTagVariables();
+
     int     getOsMuon();
     int     getOsMuonTag();
     float   getOsMuonTagMvaValue();
-    float   getOsMuonTagMistagProb();
+    std::pair<float,float> getOsMuonTagMistagProb(int type);
 
     void    setSsForTag(int iB, int iPV) { ssIndex_ = iB; pvIndex_ = iPV;}
     void    setOsMuonCuts(float wpB, float wpE, float dzCut);
     void    inizializeOSMuonMvaTagReader(TString weightsFile, TString path);
+    int     inizializeOSMuonMvaMistagMethods(TString path, TString hltName, TString fitName, TString graphName);
 
     int     getNosMuons(){return nMuonsSel_;}
+
 private:    
     TString methodNameFromWeightName();
     void    computeVariables();
@@ -41,6 +46,7 @@ private:
     TMVA::Reader osMuonTagReader_;
     TString weightsFile_;
     TString methodName_;
+    TString path_;
 
     int ssIndex_;
     int pvIndex_;
@@ -55,7 +61,6 @@ private:
     int nMuonsSel_;
 
     //MVA Variables
-
     float muoPt_;
     float absmuoEta_;
     float muoDxy_;
@@ -63,19 +68,26 @@ private:
     float muoSoftMvaValue_;
     float muoDrB_;
     float muoPFIso_;
-
     float muoJetConePt_;
     float muoJetConePtRel_;
     float muoJetConeDr_;
     float muoJetConeEnergyRatio_;
-    float muoJetCSV_;
     float muoJetDFprob_;
     float muoJetConeSize_;
     float muoJetConeQ_;
-
     float muoCharge_;
 
     float DUMMY_;
+
+    //MISTAG VARIABLES
+    int nCat_;
+    float *catEdgeL_;
+    float *catEdgeR_;
+    float *catMistag_;
+    float *catMistagErr_;
+
+    TF1 *perEvtWfit_;
+    TGraph *perEvtWgraph_;
 
 };
 
