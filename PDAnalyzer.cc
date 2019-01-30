@@ -89,6 +89,8 @@ void PDAnalyzer::beginJob() {
 
     inizializeMuonMvaReader( muonMvaMethod );
     inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
+    bool osInit = inizializeOSMuonMvaMistagMethods();
+    if(!osInit) cout<<"METHOD NOT INIZIALIZATED. ABORT"<<endl;
 
     if(process=="BsJPsiPhi") SetBsMassRange(5.20, 5.50);
     if(process=="BuJPsiK") SetBuMassRange(5.1, 5.50);
@@ -313,22 +315,22 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
     (tWriter->osMuon) = 1;
     float osMuonTagMvaValue = getOsMuonTagMvaValue();
+    pair<float,float> osMuonTagMistag = getOsMuonTagMistagProb(2);
     (tWriter->osMuonTagMvaValue) = osMuonTagMvaValue;
+    (tWriter->osMuonTagMistag) = osMuonTagMistag.first;
 
-    //(tWriter->osMuonTagMistag) = 
+    hTest->Fill(osMuonTagMistag.first);
 
     hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
 
     if( TMath::Sign(1, ssBLund) == tagDecision ){ 
         hmass_ssB_osRT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 1 ;
-        hTest->Fill(osMuonTagMvaValue);
     }
 
     if( TMath::Sign(1, ssBLund) != tagDecision ){
         hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
         (tWriter->osMuonTag) = 0 ;
-        hTest2->Fill(osMuonTagMvaValue);
     }
 
     //INDICES

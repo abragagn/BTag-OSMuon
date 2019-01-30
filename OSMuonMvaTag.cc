@@ -10,6 +10,7 @@ OSMuonMvaTag::OSMuonMvaTag():
 ,               pvIndex_(-1)
 ,               osMuonIndex_(-1)
 ,               osMuonTrackIndex_(-1)
+,               osMuonTagMvaValue_(-1)
 ,               wpB_(0.)
 ,               wpE_(0.)
 ,               dzCut_(1.)
@@ -25,6 +26,7 @@ void OSMuonMvaTag::inizializeTagVariables()
     pvIndex_ = -1;
     osMuonIndex_ = -1;
     osMuonTrackIndex_ = -1;
+    osMuonTagMvaValue_ = -1;
     nMuonsSel_ = 0;
 }
 
@@ -65,7 +67,7 @@ void OSMuonMvaTag::inizializeOSMuonMvaTagReader(
     osMuonTagReader_.BookMVA( methodName_, weightsFile_ );
 }
 
-int OSMuonMvaTag::inizializeOSMuonMvaMistagMethods( 
+bool OSMuonMvaTag::inizializeOSMuonMvaMistagMethods( 
     TString path = "/lustre/cmswork/abragagn/mvaWeights/OsMuonTag/"
 ,    TString hltName = "HltJpsiMu"    
 ,    TString fitName = "fitErf"
@@ -74,7 +76,8 @@ int OSMuonMvaTag::inizializeOSMuonMvaMistagMethods(
 {
     //CAT
     std::ifstream ifs(path + "OSMuonTagger" + hltName + "Categories.txt", std::ifstream::in);
-    if(!ifs.is_open()) return 0;
+    if(!ifs.is_open()) return false;
+    ifs >> methodName_;
     ifs >> nCat_;
     catEdgeL_     = new float[nCat_];
     catEdgeR_     = new float[nCat_];
@@ -90,15 +93,12 @@ int OSMuonMvaTag::inizializeOSMuonMvaMistagMethods(
 
     //FIT
     auto *f = new TFile(path + "OSMuonTagger" + hltName + "Functions.root");
-    if(f->IsZombie()) return 0;
+    if(f->IsZombie()) return false;
     f->cd();
     perEvtWfit_ = (TF1*)f->Get(fitName);
     perEvtWgraph_ = (TGraph*)f ->Get(graphName); //KDE
-    f->Close();
     delete f;
-    f->cd();
-
-    return 1;  
+    return true;  
 }
 
 int OSMuonMvaTag::getOsMuon()
@@ -255,7 +255,8 @@ float OSMuonMvaTag::getOsMuonTagMvaValue()
     if(osMuonIndex_ < 0){ cout<<"WARNING: OS MU NOT INITIALIZED"<<endl; getOsMuon(); }
     
     computeVariables();
-    return osMuonTagReader_.EvaluateMVA(methodName_);
+    osMuonTagMvaValue_ = osMuonTagReader_.EvaluateMVA(methodName_);
+    return osMuonTagMvaValue_;
 }
 
 pair<float, float> OSMuonMvaTag::getOsMuonTagMistagProb( int type = 0 )
@@ -265,7 +266,8 @@ pair<float, float> OSMuonMvaTag::getOsMuonTagMistagProb( int type = 0 )
     float evtMistag[3] = {-1, -1, -1};
     float evtMistagError[3] = {0, 0, 0};
 
-    float mvaValue = getOsMuonTagMvaValue();
+    float mvaValue = osMuonTagMvaValue_;
+    if(mvaValue == -1) mvaValue = getOsMuonTagMvaValue();
 
     if( mvaValue < catEdgeL_[0] ){
         evtMistag[0] = catMistag_[0];

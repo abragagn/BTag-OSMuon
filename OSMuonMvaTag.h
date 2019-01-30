@@ -34,7 +34,7 @@ public:
     void    setSsForTag(int iB, int iPV) { ssIndex_ = iB; pvIndex_ = iPV;}
     void    setOsMuonCuts(float wpB, float wpE, float dzCut);
     void    inizializeOSMuonMvaTagReader(TString weightsFile, TString path);
-    int     inizializeOSMuonMvaMistagMethods(TString path, TString hltName, TString fitName, TString graphName);
+    bool    inizializeOSMuonMvaMistagMethods(TString path, TString hltName, TString fitName, TString graphName);
 
     int     getNosMuons(){return nMuonsSel_;}
 
@@ -52,6 +52,8 @@ private:
     int pvIndex_;
     int osMuonIndex_;
     int osMuonTrackIndex_;
+
+    float osMuonTagMvaValue_;
 
     float wpB_;
     float wpE_;
