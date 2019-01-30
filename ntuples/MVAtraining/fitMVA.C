@@ -812,16 +812,18 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
 
 
         auto *c3 = new TCanvas();
-        pdfW_extended->DrawClone("");
         gr->SetMarkerStyle(20);
         gr->SetMarkerSize(.5);
         gr->GetYaxis()->SetTitle("per-event mistag");
         gr->GetXaxis()->SetTitle("MVA output");
         gr->SetMinimum(0.);
+        gr->SetMaximum(1.);
+        gr->GetXaxis()->SetLimits(0.,1.);
         gr->Draw("APE SAME");
         grAsy->Draw("E SAME");
         pdfW->SetLineColor(kGreen);
         pdfW->DrawClone("P SAME");
+        pdfW_extended->DrawClone("P SAME");
 
         c3->Update();
 
