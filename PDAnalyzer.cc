@@ -231,8 +231,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
     if(use_gen){
         for( unsigned int i=0 ; i<genId->size() ; ++i ){
-            if( IsB(i) ) ListB.push_back(i);
             if(TagMixStatus( i ) == 2) continue;
+            if( IsB(i) ) ListB.push_back(i);
             unsigned int Code = abs(genId->at(i));
             if( Code == 511 || Code == 521 || Code == 531 || Code == 541 || Code == 5122 ) ListLongLivedB.push_back(i);
         }
