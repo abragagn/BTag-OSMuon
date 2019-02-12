@@ -24,7 +24,7 @@
 using namespace std;
 
 /*
-pdTreeAnalyze /lustre/cmswork/abragagn/ntuList/MC2016Lists/BsToJpsiPhi_BMuonFilter_2016_DCAP.list hist.root -v outputFile ntu.root -v histoMode RECREATE -v use_gen t -n 10000
+pdTreeAnalyze /lustre/cmswork/abragagn/ntuList/MC2017Lists/BsToJpsiPhi_2017_DCAP.list hist.root -v outputFile ntu.root -v histoMode RECREATE -v use_gen t -n 10000
 */
 PDAnalyzer::PDAnalyzer() {
 
@@ -257,9 +257,9 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }else{
         if(process=="BsJPsiPhi") ssBLund = ((double)rand() / (RAND_MAX)) < 0.5 ? +531 : -531; //this should not be used
         if(process=="BuJPsiK"){
-            for( unsigned int i=0; i<tkSsB.size(); ++i ){
-            if( tkSsB[i] == tkJpsi[0] || tkSsB[i] == tkJpsi[1] ) continue;
-            ssBLund = trkCharge->at(tkSsB[i]) > 0 ? +521 : -521;
+            for( auto it:tkSsB ){
+                if( it == tkJpsi[0] || it == tkJpsi[1] ) continue;
+                ssBLund = trkCharge->at(it) > 0 ? +521 : -521;
             }
         }
     }
