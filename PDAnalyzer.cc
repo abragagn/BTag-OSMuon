@@ -40,10 +40,9 @@ PDAnalyzer::PDAnalyzer() {
 
     setUserParameter( "outputFile", "ntu.root" );
 
-    setUserParameter( "muonIdWpBarrel", "0.00" ); 
-    setUserParameter( "muonIdWpEndcap", "0.00" ); 
+    setUserParameter( "muonIdWp", "0.00" ); 
 
-    setUserParameter( "muonMvaMethod",      "BDTMuonID2017woIPwIso" ); 
+    setUserParameter( "muonMvaMethod",      "DNNMuonIDFull2017woIPwIso" ); 
     setUserParameter( "osMuonTagMvaMethod", "DNNOsMuonHLTJpsiMu_test241" ); 
 
     setUserParameter( "ptCut", "40.0" ); //needed for paolo's code for unknow reasons
@@ -73,8 +72,7 @@ void PDAnalyzer::beginJob() {
 
     getUserParameter( "outputFile", outputFile );
 
-    getUserParameter( "muonIdWpBarrel", muonIdWpBarrel ); 
-    getUserParameter( "muonIdWpEndcap", muonIdWpEndcap ); 
+    getUserParameter( "muonIdWp", muonIdWp ); 
 
     getUserParameter( "muonMvaMethod", muonMvaMethod );
     getUserParameter( "osMuonTagMvaMethod", osMuonTagMvaMethod );
@@ -85,7 +83,7 @@ void PDAnalyzer::beginJob() {
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
-    setOsMuonCuts(muonIdWpBarrel, muonIdWpEndcap, 1. );
+    setOsMuonCuts(muonIdWp, 1. );
 
     inizializeMuonMvaReader( muonMvaMethod );
     inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
@@ -230,10 +228,10 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     float evtWeight = 1;
 
     if(use_gen){
-        for( unsigned int i=0 ; i<genId->size() ; ++i ){
+        for( uint i=0 ; i<genId->size() ; ++i ){
             if(TagMixStatus( i ) == 2) continue;
             if( IsB(i) ) ListB.push_back(i);
-            unsigned int Code = abs(genId->at(i));
+            uint Code = abs(genId->at(i));
             if( Code == 511 || Code == 521 || Code == 531 || Code == 541 || Code == 5122 ) ListLongLivedB.push_back(i);
         }
 
@@ -465,7 +463,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             printDaughterTree(muoAncestor, "");
             cout<<endl;
 
-            cout<<"dXY = "<<GetSignedDxy(iMuon, iSsPV)<<endl;
+            cout<<"dXY = "<<GetMuonSignedDxy(iMuon, iSsPV)<<endl;
             cout<<"osB: "<<genPt->at( muoAncestor )<<" "<<genEta->at( muoAncestor )<<" "<<genPhi->at( muoAncestor )<<endl;
             cout<<"jet: "<<jetPt->at( iJet )<<" "<<jetEta->at( iJet )<<" "<<jetPhi->at( iJet )<<endl;
             cout<<"muo: "<<muoPt->at( iMuon )<<" "<<muoEta->at( iMuon )<<" "<<muoPhi->at( iMuon )<<endl;
@@ -484,7 +482,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->muoPhi) = muoPhi->at(iMuon);
         (tWriter->muoCharge) = trkCharge->at(itkmu);
 
-        (tWriter->muoDxy) = GetSignedDxy(iMuon, iSsPV);
+        (tWriter->muoDxy) = GetMuonSignedDxy(iMuon, iSsPV);
         (tWriter->muoDz) = dZ(itkmu, iSsPV);
         (tWriter->muoExy) = trkExy->at(itkmu);
         (tWriter->muoEz) = trkEz->at(itkmu);

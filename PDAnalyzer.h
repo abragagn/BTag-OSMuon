@@ -67,7 +67,7 @@ class PDAnalyzer: public virtual PDAnalyzerUtil
     //PARAMETERS
     bool verbose, useHLT, writeVars;
     TString outputFile;
-    float muonIdWpBarrel, muonIdWpEndcap;
+    float muonIdWp;
     TString process;
     TString muonMvaMethod;
     TString osMuonTagMvaMethod;
