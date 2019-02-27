@@ -3,6 +3,7 @@
 #include <math.h>
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 #include "TFile.h"
 #include "TTree.h"
@@ -21,6 +22,7 @@
 #include "Math/MinimizerOptions.h"
 #include "TMatrixDSym.h"
 #include "TFitResult.h"
+#include "TEfficiency.h"
 
 using namespace std;
 
@@ -28,9 +30,9 @@ TString year_;
 TString process_;
 TString dir_ = "./";
 TString suffix_;
-float min_, max_;
+double min_, max_;
 int nBins_=50;
-pair<float, float> CountEventsWithFit(TH1 *hist);
+pair<double, double> CountEventsWithFit(TH1 *hist);
 
 void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TString cut_ = "", TString suffix = "")
 {
@@ -54,38 +56,41 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     if(file.Contains("Data")) process_ = process_ + "Data";
 
     TH1F *ssB       = new TH1F( "ssB", "ssB", nBins_, min_, max_ );
+    TH1F *ssB_UT    = new TH1F( "ssB_UT", "ssB_UT", nBins_, min_, max_ );
     TH1F *ssB_RT    = new TH1F( "ssB_RT", "ssB_RT", nBins_, min_, max_ );
     TH1F *ssB_WT    = new TH1F( "ssB_WT", "ssB_WT", nBins_, min_, max_ );
 
-    TString cut = "( (fabs(muoEta)<1.2 && muoSoftMvaValue>0.891) || (fabs(muoEta)>=1.2 && muoSoftMvaValue>0.8925) )";
-    cut += "&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)";
+    TString cut = "1";
+    //cut += "&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)";
     TString cutEvt = "hltJpsiMu&&ssbIsTight";
 
     if(cutEvt_ != "") cutEvt = cutEvt + "&&" + cutEvt_;
     if(cut_ != "")    cut = cut + "&&" + cut_;
 
     TString base =  "evtWeight*((" + cutEvt;
+    TString cutUT = base + ")&&(osMuon==0 || osMuon&&!(" + cut + ")))";
     TString cutRT = base + ")&&(" + cut + ")&&osMuon&&osMuonTag==1)";
     TString cutWT = base + ")&&(" + cut + ")&&osMuon&&osMuonTag==0)";
 
-    t->Project("ssB", "ssbMass", base + "))");
+    t->Project("ssB", "ssbMass", base + "))" );
     t->Project("ssB_RT", "ssbMass", cutRT );
     t->Project("ssB_WT", "ssbMass", cutWT );
 
-    pair<float, float> nTot;
-    pair<float, float> nUntag;
-    pair<float, float> nRT;
-    pair<float, float> nWT;
+    pair<double, double> nTot;
+    pair<double, double> nUT;
+    pair<double, double> nRT;
+    pair<double, double> nWT;
+    pair<double, double> eff;
+    pair<double, double> w;
+    pair<double, double> power;
 
     nTot.first = ssB->Integral();
     nRT.first = ssB_RT->Integral();
     nWT.first = ssB_WT->Integral();
-    nUntag.first = nTot.first - nRT.first - nWT.first;
 
     nTot.second = sqrt(nTot.first);
     nRT.second = sqrt(nRT.first);
     nWT.second = sqrt(nWT.first);
-    nUntag.first = sqrt(nUntag.first);
 
     if(file.Contains("Data")){
         nTot = CountEventsWithFit(ssB);
@@ -93,8 +98,15 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
         nWT = CountEventsWithFit(ssB_WT);        
     }
 
-    float eff = (nRT.first+nWT.first)/nTot.first;
-    float w = nWT.first/(nRT.first+nWT.first);
+    float tagged = nRT.first+nWT.first;
+
+    eff.first = (nRT.first+nWT.first)/(nTot.first);
+    w.first = nWT.first/(nRT.first+nWT.first);
+    power.first = eff.first*pow((1-2*w.first), 2);
+
+    eff.second = (TEfficiency::Bayesian(nTot.first,tagged,0.6827,1,1,1)-TEfficiency::Bayesian(nTot.first,tagged,0.6827,1,1,0))/2;
+    w.second = (TEfficiency::Bayesian(tagged,nWT.first,0.6827,1,1,1)-TEfficiency::Bayesian(tagged,nWT.first,0.6827,1,1,0))/2;
+    power.second = sqrt(16*pow(eff.first,2)*pow(1-2*w.first,2)*pow(w.second,2) + pow(1-2*w.first,4)*pow(eff.second,2));
 
     cout<<endl;
 
@@ -102,9 +114,9 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     cout<<"RT = "<<nRT.first<<" +- "<<nRT.second<<endl;
     cout<<"WT = "<<nWT.first<<" +- "<<nWT.second<<endl;    
 
-    cout<<"Eff = "<<100*eff<<"%"<<endl;
-    cout<<"Mistag = "<<100*w<<"%"<<endl;
-    cout<<"Power = "<< 100*eff*pow((1-2*w), 2)<<"%"<<endl;
+    cout<<"Eff = "<<100*eff.first<<" +- "<<100*eff.second<<" %"<<endl;
+    cout<<"Mistag = "<<100*w.first<<" +- "<<100*w.second<<" %"<<endl;
+    cout<<"Power = "<<100*power.first<<" +- "<<100*power.second<<" %"<<endl;
 
     cout<<endl;
 
@@ -112,12 +124,12 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
 
 }
 
-pair<float, float> CountEventsWithFit(TH1 *hist){
+pair<double, double> CountEventsWithFit(TH1 *hist){
 
     ROOT::Math::MinimizerOptions::SetDefaultMaxFunctionCalls( 10000 );
 
-    float mean = 5.3663;
-    float sigma = 0.015;
+    double mean = 5.3663;
+    double sigma = 0.015;
     if(process_.Contains("BsJPsiPhi")) mean = 5.3663;
     if(process_.Contains("BuJPsiK"))   mean = 5.2793;
     if(process_.Contains("BdJPsiKx"))  mean = 5.2796;
@@ -134,7 +146,7 @@ pair<float, float> CountEventsWithFit(TH1 *hist){
     TF1 *func = new TF1("func", funcDef, min_, max_);
 
     //SIGNAL
-    float limit = hist->GetEntries()*hist->GetBinWidth(1);
+    double limit = hist->GetEntries()*hist->GetBinWidth(1);
 
     func->SetParameter(0, mean);
     func->SetParameter(1, limit/3);
@@ -152,7 +164,7 @@ pair<float, float> CountEventsWithFit(TH1 *hist){
     func->SetParLimits(6, sigma/2, sigma*2);
 
     //BKG
-    float bkgHeight = 0.;
+    double bkgHeight = 0.;
     int nBinsBkgEst = 7;
     for(int i=0; i<nBinsBkgEst; i++)
         bkgHeight += hist->GetBinContent(hist->GetNbinsX()-i);
@@ -209,13 +221,13 @@ pair<float, float> CountEventsWithFit(TH1 *hist){
     c1->Print(dir_ + name + "_" + year_ + suffix_ + ".pdf");
     c1->Print(dir_ + name + "_" + year_ + suffix_ + ".png");
 */
-    float nEvt = fit->GetParameter(1);
+    double nEvt = fit->GetParameter(1);
     nEvt += fit->GetParameter(2);
     nEvt += fit->GetParameter(3);
     nEvt/=hist->GetBinWidth(1);
 
     TMatrixDSym cov = r->GetCovarianceMatrix();
-    float errN = sqrt(cov(1,1)+cov(2,2)+cov(3,3)+2*(cov(1,2)+cov(1,3)+cov(2,3)))/hist->GetBinWidth(1);
+    double errN = sqrt(cov(1,1)+cov(2,2)+cov(3,3)+2*(cov(1,2)+cov(1,3)+cov(2,3)))/hist->GetBinWidth(1);
 
     return make_pair(nEvt, errN);
 }
