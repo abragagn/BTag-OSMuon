@@ -56,7 +56,7 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     if(file.Contains("Data")) process_ = process_ + "Data";
 
     TH1F *ssB       = new TH1F( "ssB", "ssB", nBins_, min_, max_ );
-    TH1F *ssB_UT    = new TH1F( "ssB_UT", "ssB_UT", nBins_, min_, max_ );
+    TH1F *ssB_TT    = new TH1F( "ssB_TT", "ssB_TT", nBins_, min_, max_ );
     TH1F *ssB_RT    = new TH1F( "ssB_RT", "ssB_RT", nBins_, min_, max_ );
     TH1F *ssB_WT    = new TH1F( "ssB_WT", "ssB_WT", nBins_, min_, max_ );
 
@@ -68,16 +68,17 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     if(cut_ != "")    cut = cut + "&&" + cut_;
 
     TString base =  "evtWeight*((" + cutEvt;
-    TString cutUT = base + ")&&(osMuon==0 || osMuon&&!(" + cut + ")))";
+    TString cutTT = base + ")&&(" + cut + ")&&osMuon)";
     TString cutRT = base + ")&&(" + cut + ")&&osMuon&&osMuonTag==1)";
     TString cutWT = base + ")&&(" + cut + ")&&osMuon&&osMuonTag==0)";
 
     t->Project("ssB", "ssbMass", base + "))" );
     t->Project("ssB_RT", "ssbMass", cutRT );
     t->Project("ssB_WT", "ssbMass", cutWT );
+    t->Project("ssB_TT", "ssbMass", cutTT );
 
     pair<double, double> nTot;
-    pair<double, double> nUT;
+    pair<double, double> nTT;
     pair<double, double> nRT;
     pair<double, double> nWT;
     pair<double, double> eff;
@@ -87,30 +88,51 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     nTot.first = ssB->Integral();
     nRT.first = ssB_RT->Integral();
     nWT.first = ssB_WT->Integral();
+    nTT.first = ssB_TT->Integral();
 
     nTot.second = sqrt(nTot.first);
     nRT.second = sqrt(nRT.first);
     nWT.second = sqrt(nWT.first);
+    nTT.second = sqrt(nTT.first);
 
     if(file.Contains("Data")){
         nTot = CountEventsWithFit(ssB);
         nRT = CountEventsWithFit(ssB_RT);
         nWT = CountEventsWithFit(ssB_WT);        
+        nTT = CountEventsWithFit(ssB_TT);        
     }
 
-    float tagged = nRT.first+nWT.first;
+    double tagged = nRT.first+nWT.first;
 
-    eff.first = (nRT.first+nWT.first)/(nTot.first);
-    w.first = nWT.first/(nRT.first+nWT.first);
+    eff.first = (nTT.first)/(nTot.first);
+    w.first = nWT.first/(nTT.first);
     power.first = eff.first*pow((1-2*w.first), 2);
 
-    eff.second = (TEfficiency::Bayesian(nTot.first,tagged,0.6827,1,1,1)-TEfficiency::Bayesian(nTot.first,tagged,0.6827,1,1,0))/2;
-    w.second = (TEfficiency::Bayesian(tagged,nWT.first,0.6827,1,1,1)-TEfficiency::Bayesian(tagged,nWT.first,0.6827,1,1,0))/2;
-    power.second = sqrt(16*pow(eff.first,2)*pow(1-2*w.first,2)*pow(w.second,2) + pow(1-2*w.first,4)*pow(eff.second,2));
+    if(file.Contains("Data")){
+        double TT2 = pow(nTT.first,2);
+        double WT2 = pow(nWT.first,2);
+        double Tot2 = pow(nTot.first,2);
+        double sTT2 = pow(nTT.second,2);
+        double sWT2 = pow(nWT.second,2);
+        double sTot2 = pow(nTot.second,2);
+
+        eff.second  = sqrt( sTT2/Tot2 + sTot2*TT2/pow(Tot2,2) );
+        w.second    = sqrt( sWT2/TT2 + sTT2*WT2/pow(TT2,2) );
+        power.second = sqrt( pow(sTT2*(TT2-4*WT2),2)/(Tot2*pow(TT2,2)) 
+            + 16*sWT2*pow(nTT.first-2*nWT.first,2)/(Tot2*TT2)
+            + sTot2*pow(nTT.first-2*nWT.first,4)/(pow(Tot2,2)*TT2) );
+    }else{
+        double cl = 0.6827;
+        double alpha = 0.5;
+        eff.second = (TEfficiency::Bayesian(nTot.first,tagged,cl,alpha,alpha,1)-TEfficiency::Bayesian(nTot.first,tagged,cl,alpha,alpha,0))/2;
+        w.second = (TEfficiency::Bayesian(tagged,nWT.first,cl,alpha,alpha,1)-TEfficiency::Bayesian(tagged,nWT.first,cl,alpha,alpha,0))/2;
+        power.second = sqrt(16*pow(eff.first,2)*pow(1-2*w.first,2)*pow(w.second,2) + pow(1-2*w.first,4)*pow(eff.second,2));
+    }
 
     cout<<endl;
 
-    cout<<"Bs = "<<nTot.first<<" +- "<<nTot.second<<endl;
+    cout<<"Bs = "<<nTot.first<<" +- "<<(int)nTot.second<<endl;
+    cout<<std::setprecision(4);
     cout<<"Eff = "<<100*eff.first<<" +- "<<100*eff.second<<" %"<<endl;
     cout<<"Mistag = "<<100*w.first<<" +- "<<100*w.second<<" %"<<endl;
     cout<<"Power = "<<100*power.first<<" +- "<<100*power.second<<" %"<<endl;
