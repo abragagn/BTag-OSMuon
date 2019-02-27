@@ -111,9 +111,6 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     cout<<endl;
 
     cout<<"Bs = "<<nTot.first<<" +- "<<nTot.second<<endl;
-    cout<<"RT = "<<nRT.first<<" +- "<<nRT.second<<endl;
-    cout<<"WT = "<<nWT.first<<" +- "<<nWT.second<<endl;    
-
     cout<<"Eff = "<<100*eff.first<<" +- "<<100*eff.second<<" %"<<endl;
     cout<<"Mistag = "<<100*w.first<<" +- "<<100*w.second<<" %"<<endl;
     cout<<"Power = "<<100*power.first<<" +- "<<100*power.second<<" %"<<endl;
