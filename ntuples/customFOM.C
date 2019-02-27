@@ -1,13 +1,39 @@
+#include <vector>
+#include <string>
+#include <math.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
+
+#include "TFile.h"
+#include "TTree.h"
+#include "TBranch.h"
+#include "TROOT.h"
+#include "TSystem.h"
+#include "TStyle.h"
+#include "TCut.h"
+#include "TH1.h"
+#include "TF1.h"
+#include "TString.h"
+#include "TMath.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
+#include "TCanvas.h"
+#include "Math/MinimizerOptions.h"
+#include "TMatrixDSym.h"
+#include "TFitResult.h"
+#include "TEfficiency.h"
+
 void customFOM( TString var = "muoPt", TString cutDir = "down", TString addCut = "", bool verbose = false )
 {
-
     if((cutDir != "down") && (cutDir != "up")) return;
 
     gStyle->SetOptTitle(1); gStyle->SetOptStat(0);
     gStyle->SetOptFit(0);   gStyle->SetStatBorderSize(0);
     gStyle->SetStatX(.49);  gStyle->SetStatY(.89);
 
-    TFile *f = new TFile("ntuBs2016.root");
+    TFile *f = new TFile("ntuBsMC2017.root");
     TTree *t = (TTree*)f ->Get("PDsecondTree");
 
     int nBins=100;
@@ -18,13 +44,13 @@ void customFOM( TString var = "muoPt", TString cutDir = "down", TString addCut =
     TH1F *Sgn = new TH1F( "Sgn", "Sgn", nBins, min, max );
     TH1F *Bkg = new TH1F( "Bkg", "Bkg", nBins, min, max );
 
-    TCut generalCuts = "osMuon==1&&((fabs(muoEta)<1.2&&muoSoftMvaValue>0.26)||((fabs(muoEta)>=1.2&&muoSoftMvaValue>0.50)))";
+    TCut generalCuts = "evtWeight*(osMuon==1";
     generalCuts += addCut;
-    TCut sgnDef = generalCuts + "osMuonTag==1";
-    TCut bkgDef = generalCuts + "osMuonTag==0";
+    TCut sgnDef = generalCuts + "osMuonTag==1)";
+    TCut bkgDef = generalCuts + "osMuonTag==0)";
 
 
-    t->Project("Tot", "ssbMass", "");
+    t->Project("Tot", "ssbMass", "evtWeight");
     t->Project("Sgn", var, sgnDef);
     t->Project("Bkg", var, bkgDef);
 
@@ -53,7 +79,6 @@ void customFOM( TString var = "muoPt", TString cutDir = "down", TString addCut =
         for(int bin=nBins; bin>0; --bin){
 
             float varCut = Sgn->GetBinLowEdge(bin);
-
             nSgn += Sgn->GetBinContent(bin);
             nBkg += Bkg->GetBinContent(bin);
             if(nSgn + nBkg == 0) continue;
@@ -74,13 +99,11 @@ void customFOM( TString var = "muoPt", TString cutDir = "down", TString addCut =
                 bestE = eff;
                 bestW = w;
             }
-
         }       
     }else{
         for(int bin=0; bin<=nBins; ++bin){
 
             float varCut = Sgn->GetBinLowEdge(bin+1);
-
             nSgn += Sgn->GetBinContent(bin);
             nBkg += Bkg->GetBinContent(bin);
             if(nSgn + nBkg == 0) continue;
@@ -101,10 +124,8 @@ void customFOM( TString var = "muoPt", TString cutDir = "down", TString addCut =
                 bestE = eff;
                 bestW = w;
             }
-
         }           
     }
-
 
     TGraph* grP = new TGraph(nBins, x, yP);
     TGraph* grE = new TGraph(nBins, x, yE);
@@ -134,5 +155,4 @@ void customFOM( TString var = "muoPt", TString cutDir = "down", TString addCut =
     delete f;
 
     return;
-
 }
