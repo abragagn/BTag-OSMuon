@@ -118,7 +118,7 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
 
         eff.second  = sqrt( sTT2/Tot2 + sTot2*TT2/pow(Tot2,2) );
         w.second    = sqrt( sWT2/TT2 + sTT2*WT2/pow(TT2,2) );
-        power.second = sqrt( pow(sTT2*(TT2-4*WT2),2)/(Tot2*pow(TT2,2)) 
+        power.second = sqrt( sTT2*pow((TT2-4*WT2),2)/(Tot2*pow(TT2,2)) 
             + 16*sWT2*pow(nTT.first-2*nWT.first,2)/(Tot2*TT2)
             + sTot2*pow(nTT.first-2*nWT.first,4)/(pow(Tot2,2)*TT2) );
     }else{
@@ -133,9 +133,9 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
 
     cout<<"Bs = "<<nTot.first<<" +- "<<(int)nTot.second<<endl;
     cout<<std::setprecision(4);
-    cout<<"Eff = "<<100*eff.first<<" +- "<<100*eff.second<<" %"<<endl;
-    cout<<"Mistag = "<<100*w.first<<" +- "<<100*w.second<<" %"<<endl;
-    cout<<"Power = "<<100*power.first<<" +- "<<100*power.second<<" %"<<endl;
+    cout<<"Eff = "<<100*eff.first<<" +- "<<100*eff.second<<" %"<<" ["<<100*eff.second/eff.first<<"%]"<<endl;
+    cout<<"Mistag = "<<100*w.first<<" +- "<<100*w.second<<" %"<<" ["<<100*w.second/w.first<<"%]"<<endl;
+    cout<<"Power = "<<100*power.first<<" +- "<<100*power.second<<" %"<<" ["<<100*power.second/power.first<<"%]"<<endl;
 
     cout<<endl;
 
