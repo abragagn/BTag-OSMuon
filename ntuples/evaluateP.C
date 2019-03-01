@@ -124,9 +124,12 @@ void evaluateP(TString file = "./ntuBsMC2017.root",  TString cutEvt_ = "", TStri
     }else{
         double cl = 0.6827;
         double alpha = 0.5;
-        eff.second = (TEfficiency::Bayesian(nTot.first,tagged,cl,alpha,alpha,1)-TEfficiency::Bayesian(nTot.first,tagged,cl,alpha,alpha,0))/2;
-        w.second = (TEfficiency::Bayesian(tagged,nWT.first,cl,alpha,alpha,1)-TEfficiency::Bayesian(tagged,nWT.first,cl,alpha,alpha,0))/2;
-        power.second = sqrt(16*pow(eff.first,2)*pow(1-2*w.first,2)*pow(w.second,2) + pow(1-2*w.first,4)*pow(eff.second,2));
+        eff.second = (TEfficiency::Bayesian(nTot.first,tagged,cl,alpha,alpha,1)
+                    -TEfficiency::Bayesian(nTot.first,tagged,cl,alpha,alpha,0))/2;
+        w.second = (TEfficiency::Bayesian(tagged,nWT.first,cl,alpha,alpha,1)
+                    -TEfficiency::Bayesian(tagged,nWT.first,cl,alpha,alpha,0))/2;
+        power.second = sqrt(16*pow(eff.first,2)*pow(1-2*w.first,2)*pow(w.second,2) 
+                    + pow(1-2*w.first,4)*pow(eff.second,2));
     }
 
     cout<<endl;

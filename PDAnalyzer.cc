@@ -40,7 +40,7 @@ PDAnalyzer::PDAnalyzer() {
 
     setUserParameter( "outputFile", "ntu.root" );
 
-    setUserParameter( "muonIdWp", "0.00" ); 
+    setUserParameter( "muonIdWp", "0.35" ); 
 
     setUserParameter( "muonMvaMethod",      "DNNMuonIDFull2017woIPwIso" ); 
     setUserParameter( "osMuonTagMvaMethod", "DNNOsMuonHLTJpsiMu_test241" ); 
@@ -83,9 +83,9 @@ void PDAnalyzer::beginJob() {
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
-    setOsMuonCuts(muonIdWp, 1. );
+    setOsMuonCuts(muonIdWp, 1.0 );
 
-    inizializeMuonMvaReader( muonMvaMethod );
+    inizializeMuonMvaReader();
     inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
     bool osInit = inizializeOSMuonMvaMistagMethods();
     if(!osInit) cout<<"METHOD NOT INIZIALIZATED. ABORT"<<endl;
