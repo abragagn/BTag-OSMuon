@@ -90,6 +90,7 @@ class PDAnalyzer: public virtual PDAnalyzerUtil
     //FUNCTIONS
     int GetBestSvtFromTrack(int trkIndex );
     float GetSvtCharge(int iSvt, float kappa);
+    float GetListPfcCharge(std::vector <int> *list, float kappa);
 // additional features: second ntuple
     PDSecondNtupleWriter* tWriter;
 

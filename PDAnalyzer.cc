@@ -202,21 +202,21 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
-    int iSsB = GetCandidate(process);
-    if(iSsB<0) return false;
+    int ssbSVT = GetCandidate(process);
+    if(ssbSVT<0) return false;
 
     bool isTight = false;
-    int iSsBtight = GetTightCandidate(process);
-    if(iSsBtight>=0){
+    int ssbSVTtight = GetTightCandidate(process);
+    if(ssbSVTtight>=0){
         isTight = true;
-        iSsB = iSsBtight;
+        ssbSVT = ssbSVTtight;
     }
 
-    int iJPsi = (subVtxFromSV(iSsB)).at(0);
+    int iJPsi = (subVtxFromSV(ssbSVT)).at(0);
     vector <int> tkJpsi = tracksFromSV(iJPsi);
-    vector <int> tkSsB = tracksFromSV(iSsB);
+    vector <int> tkSsB = tracksFromSV(ssbSVT);
 
-    TLorentzVector tB = GetTLorentzVecFromJpsiX(iSsB);
+    TLorentzVector tB = GetTLorentzVecFromJpsiX(ssbSVT);
 
     //generation information
 
@@ -263,28 +263,28 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     }
 
 
-    int iSsPV = GetBestPV(iSsB, tB);
-    if(iSsPV < 0) return false;
+    int ssbPVT = GetBestPV(ssbSVT, tB);
+    if(ssbPVT < 0) return false;
 
-    setSsForTag(iSsB, iSsPV);
+    setSsForTag(ssbSVT, ssbPVT);
 
     //FILLING SS
     (tWriter->ssbPt) = tB.Pt();
     (tWriter->ssbEta) = tB.Eta();
     (tWriter->ssbPhi) = tB.Phi();
-    (tWriter->ssbMass) = svtMass->at(iSsB);
+    (tWriter->ssbMass) = svtMass->at(ssbSVT);
     (tWriter->ssbIsTight) = isTight;
 
-    (tWriter->ssbLxy) = GetCt2D(tB, iSsB) / (MassBs/tB.Pt());
-    (tWriter->ssbCt2D) = GetCt2D(tB, iSsB);
-    (tWriter->ssbCt2DErr) = GetCt2DErr(tB, iSsB, iSsPV);
-    (tWriter->ssbCt2DSigmaUnit) = GetCt2D(tB, iSsB, iSsPV)/GetCt2DErr(tB, iSsB, iSsPV);
-    (tWriter->ssbCt3D) = GetCt3D(tB, iSsB, iSsPV);
-    (tWriter->ssbCt3DErr) = GetCt3DErr(tB, iSsB, iSsPV);
-    (tWriter->ssbCt3DSigmaUnit) = GetCt3D(tB, iSsB, iSsPV)/GetCt3DErr(tB, iSsB, iSsPV);
+    (tWriter->ssbLxy) = GetCt2D(tB, ssbSVT) / (MassBs/tB.Pt());
+    (tWriter->ssbCt2D) = GetCt2D(tB, ssbSVT);
+    (tWriter->ssbCt2DErr) = GetCt2DErr(tB, ssbSVT, ssbPVT);
+    (tWriter->ssbCt2DSigmaUnit) = GetCt2D(tB, ssbSVT, ssbPVT)/GetCt2DErr(tB, ssbSVT, ssbPVT);
+    (tWriter->ssbCt3D) = GetCt3D(tB, ssbSVT, ssbPVT);
+    (tWriter->ssbCt3DErr) = GetCt3DErr(tB, ssbSVT, ssbPVT);
+    (tWriter->ssbCt3DSigmaUnit) = GetCt3D(tB, ssbSVT, ssbPVT)/GetCt3DErr(tB, ssbSVT, ssbPVT);
 
-    (tWriter->ssbSVT) = iSsB;
-    (tWriter->ssbPVT) = iSsPV;
+    (tWriter->ssbSVT) = ssbSVT;
+    (tWriter->ssbPVT) = ssbPVT;
     
     (tWriter->ssbLund) = ssBLund;
 
@@ -295,7 +295,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     (tWriter->evtWeight) = evtWeight;
     (tWriter->evtNb) = ListLongLivedB.size();
 
-    hmass_ssB->Fill(svtMass->at(iSsB), evtWeight);
+    hmass_ssB->Fill(svtMass->at(ssbSVT), evtWeight);
     
 //-----------------------------------------OPPOSITE SIDE-----------------------------------------
 
@@ -319,15 +319,15 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
     hTest->Fill(osMuonTagMistag.first);
 
-    hmass_ssB_os->Fill(svtMass->at(iSsB), evtWeight);
+    hmass_ssB_os->Fill(svtMass->at(ssbSVT), evtWeight);
 
     if( TMath::Sign(1, ssBLund) == tagDecision ){ 
-        hmass_ssB_osRT->Fill(svtMass->at(iSsB), evtWeight);
+        hmass_ssB_osRT->Fill(svtMass->at(ssbSVT), evtWeight);
         (tWriter->osMuonTag) = 1 ;
     }
 
     if( TMath::Sign(1, ssBLund) != tagDecision ){
-        hmass_ssB_osWT->Fill(svtMass->at(iSsB), evtWeight);
+        hmass_ssB_osWT->Fill(svtMass->at(ssbSVT), evtWeight);
         (tWriter->osMuonTag) = 0 ;
     }
 
@@ -347,7 +347,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     //COMPLEX TAGGING VARIABLES
     if(writeVars){
         float kappa = 1;
-        float drCharge = 0.4;
+        float drCharge = 0.5;
 
         //JET variables
         int iJet = trkJet->at(itkmu);
@@ -357,73 +357,72 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         float muoJetPtRel = -1;
         float muoJetDr = -1;
         float muoJetEnergyRatio = -1;
-        float muoJetCSV = -1;
-        float muoJetDFprob = -1;
-        float muoJetSize = -1;
+        int   muoJetSize = -1;
         float muoJetQ = -1;
         float muoJetPt = -1;
 
+        float muoJetCSV = -1;
+        float muoJetDFprob = -1;
+        int   muoJetNDau = -1;
+        float muoJetNHF = -1;
+        float muoJetNEF = -1;
+        float muoJetCHF = -1;
+        float muoJetCEF = -1;
+        int   muoJetNCH = -1;
+
         if(iJet>=0){
             vector <int> jet_pfcs = pfCandFromJet( iJet );
-            TVector3 vJet(jetPx->at(iJet), jetPy->at(iJet), jetPz->at(iJet));
-            muoJetPt = jetPt->at(iJet);
-            muoJetDr = deltaR(jetEta->at(iJet), jetPhi->at(iJet), muoEta->at( iMuon ), muoPhi->at(iMuon));
-            muoJetEnergyRatio = muoE->at(iMuon) / jetE->at(iJet);
+            vector <int> jet_tks = tracksFromJet( iJet );
+
+            vector <int> pfToRemove;
+            vector <int> pfToKeep;
+            for(auto it:jet_pfcs){
+                int tk = pfcTrk->at(it);
+                if(tk<0) continue;
+                if(fabs(dZ(tk, ssbPVT))>=1.0) pfToRemove.push_back(it);
+            }
+
+            TLorentzVector tJet(0., 0., 0., 0.);
+            for(auto it:jet_pfcs){
+                if ( std::find(pfToRemove.begin(), pfToRemove.end(), it) != pfToRemove.end() ) continue;
+                pfToKeep.push_back(it);
+                TLorentzVector tTPf;
+                tTPf.SetPxPyPzE(pfcPx->at(it),pfcPy->at(it),pfcPz->at(it),pfcE->at(it));
+                tJet += tTPf;
+            }
+
+            TVector3 vJet(tJet.Px(), tJet.Py(), tJet.Pz());
+            muoJetPt = tJet.Pt();
+            muoJetDr = deltaR(tJet.Eta(), tJet.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
+            muoJetEnergyRatio = muoE->at(iMuon) / tJet.E();
             vJet -= vMu;
             muoJetPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vJet.Unit());
-            muoJetSize = jet_pfcs.size();
-            muoJetQ = GetJetCharge(iJet, kappa);
-            muoJetQ *= trkCharge->at(itkmu); 
+            muoJetSize = pfToKeep.size();
+            muoJetQ = GetListPfcCharge(&pfToKeep, kappa) * trkCharge->at(itkmu);
+
             muoJetCSV = jetCSV->at(iJet);
             muoJetDFprob = GetJetProbb(iJet);
-        }
-
-        //SVT variables
-
-        int osSvt = GetBestSvtFromTrack(itkmu);
-
-        float muoSvtPtRel = -1;
-        float muoSvtDr = -1;
-        float muoSvtEnergyRatio = -1;
-        float muoSvtCSV = -1;
-        float muoSvtDFprob = -1;
-        float muoSvtSize = -1;
-        float muoSvtQ = -1;
-        float muoSvtPt = -1;
-
-        if(osSvt>=0){
-            vector <int> tkSvt = tracksFromSV(osSvt);
-            TVector3 vSvt;
-            for(auto it:tkSvt){
-                TVector3 v;
-                v.SetXYZ(trkPx->at(it), trkPy->at(it), trkPz->at(it));
-                vSvt += v;
-            }
-            muoSvtPt = vSvt.Pt();
-            muoSvtDr = deltaR(vSvt.Eta(), vSvt.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-            muoSvtEnergyRatio = -1;
-            muoSvtCSV = -1;
-            muoSvtDFprob = -1;
-            vSvt -= vMu;
-            muoSvtPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vSvt.Unit());
-            muoSvtSize = svtNTracks->at(osSvt);
-            muoSvtQ = GetSvtCharge(osSvt, kappa);
-            muoSvtQ *= trkCharge->at(itkmu);
+            muoJetNDau = jetNDau->at(iJet);
+            muoJetNHF = jetNHF->at(iJet);
+            muoJetNEF = jetNEF->at(iJet);
+            muoJetCHF = jetCHF->at(iJet);
+            muoJetCEF = jetCEF->at(iJet);
+            muoJetNCH = jetNCH->at(iJet);
         }
 
         //CONE variables
         float muoConePtRel = -1;
         float muoConeDr = -1;
         float muoConeEnergyRatio = -1;
-        float muoConeCSV = -1;
-        float muoConeDFprob = -1;
-        float muoConeSize = 0;
+        int   muoConeSize = 0;
         float muoConeQ = -1;
         float muoConePt = -1;
+        float muoConeNF = 0;
+        float muoConeCF = 0;
+        int   muoConeNCH = 0;
 
-        TLorentzVector tCone, tMu;
-        tCone.SetPtEtaPhiM(0.,0.,0.,0.);
-        tMu.SetPtEtaPhiM(muoPt->at( iMuon ), muoEta->at( iMuon ), muoPhi->at( iMuon ), MassMu);
+        TLorentzVector tCone(0.,0.,0.,0.), tMu;
+        tMu.SetPtEtaPhiM(muoPt->at(iMuon),muoEta->at(iMuon),muoPhi->at(iMuon),MassMu);
         float qCone=0, ptCone=0;
 
         for(int ipf=0; ipf<nPF; ++ipf){
@@ -431,6 +430,9 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             float etapfc = pfcEta->at(ipf);
             if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
             if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
+            if(pfcTrk->at(ipf)>=0)
+                if(fabs(dZ(pfcTrk->at(ipf), ssbPVT))>=1.0) 
+                    continue;
             if(pfpfc < 0.2) continue;
             if(fabs(etapfc) > 2.5) continue;        
             TLorentzVector a;
@@ -439,36 +441,39 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             ++muoConeSize;
             qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
             ptCone += pow(pfpfc, kappa);
+            if(pfcCharge->at(ipf)==0) muoConeNF += pfcE->at(ipf);
+            if(abs(pfcCharge->at(ipf))==1){
+                muoConeNCH++;
+                muoConeCF += pfcE->at(ipf);
+            }
         }
 
         if(ptCone != 0) qCone /= ptCone;
         else qCone = 1;
         qCone *= trkCharge->at(itkmu);
+        if(tCone.E()!=0){
+            muoConeCF /= tCone.E();
+            muoConeNF /= tCone.E();
+        }
+
+        muoConeQ = qCone;
 
         muoConePt = tCone.Pt();
         muoConeDr = deltaR(tCone.Eta(), tCone.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
         muoConeEnergyRatio = muoE->at(iMuon) / tCone.E();
-        muoConeCSV = -1;
-        muoConeDFprob = -1;
         tCone -= tMu;
         muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
-        muoConeQ = qCone;
 
         bool debugJet = false;
-
         if(debugJet && muoAncestor>=0 && iJet>=0){
-
             vector <int> jet_pfcs = pfCandFromJet( iJet );
             cout<<endl;
             printDaughterTree(muoAncestor, "");
             cout<<endl;
-
-            cout<<"dXY = "<<GetMuonSignedDxy(iMuon, iSsPV)<<endl;
+            cout<<"dXY = "<<GetMuonSignedDxy(iMuon, ssbPVT)<<endl;
             cout<<"osB: "<<genPt->at( muoAncestor )<<" "<<genEta->at( muoAncestor )<<" "<<genPhi->at( muoAncestor )<<endl;
             cout<<"jet: "<<jetPt->at( iJet )<<" "<<jetEta->at( iJet )<<" "<<jetPhi->at( iJet )<<endl;
             cout<<"muo: "<<muoPt->at( iMuon )<<" "<<muoEta->at( iMuon )<<" "<<muoPhi->at( iMuon )<<endl;
-
-            
             for(int it:jet_pfcs){
                 int g = GetClosestGen( pfcEta->at(it), pfcPhi->at(it), pfcPt->at(it) );
                 if(g>=0) cout<<genId->at(g)<<" "; else cout<<"noGen ";
@@ -482,8 +487,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->muoPhi) = muoPhi->at(iMuon);
         (tWriter->muoCharge) = trkCharge->at(itkmu);
 
-        (tWriter->muoDxy) = GetMuonSignedDxy(iMuon, iSsPV);
-        (tWriter->muoDz) = dZ(itkmu, iSsPV);
+        (tWriter->muoDxy) = GetMuonSignedDxy(iMuon, ssbPVT);
+        (tWriter->muoDz) = dZ(itkmu, ssbPVT);
         (tWriter->muoExy) = trkExy->at(itkmu);
         (tWriter->muoEz) = trkEz->at(itkmu);
 
@@ -500,29 +505,27 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->muoJetDr) = muoJetDr;
         (tWriter->muoJetEnergyRatio) = muoJetEnergyRatio;
         (tWriter->muoJetQ) = muoJetQ;
-        (tWriter->muoJetCSV) = muoJetCSV;
-        (tWriter->muoJetDFprob) = muoJetDFprob;
         (tWriter->muoJetSize) = muoJetSize;
 
-        (tWriter->muoHowMany) = getNosMuons();
-
-        (tWriter->muoSvtPt)  = muoSvtPt;
-        (tWriter->muoSvtPtRel) = muoSvtPtRel;
-        (tWriter->muoSvtDr) = muoSvtDr;
-        (tWriter->muoSvtEnergyRatio) = muoSvtEnergyRatio;
-        (tWriter->muoSvtQ) = muoSvtQ;
-        (tWriter->muoSvtCSV) = muoSvtCSV;
-        (tWriter->muoSvtDFprob) = muoSvtDFprob;
-        (tWriter->muoSvtSize) = muoSvtSize;
+        (tWriter->muoJetCSV) = muoJetCSV;
+        (tWriter->muoJetDFprob) = muoJetDFprob;
+        (tWriter->muoJetNDau) = muoJetNDau;
+        (tWriter->muoJetNF) = muoJetNHF + muoJetNEF;
+        (tWriter->muoJetCF) = muoJetCHF + muoJetCEF;
+        (tWriter->muoJetNCH) = muoJetNCH;
 
         (tWriter->muoConePt) = muoConePt;
         (tWriter->muoConePtRel) = muoConePtRel;
         (tWriter->muoConeDr) = muoConeDr;
         (tWriter->muoConeEnergyRatio) = muoConeEnergyRatio;
         (tWriter->muoConeQ) = muoConeQ;
-        (tWriter->muoConeCSV) = muoConeCSV;
-        (tWriter->muoConeDFprob) = muoConeDFprob;
         (tWriter->muoConeSize) = muoConeSize;
+        (tWriter->muoConeNF) = muoConeNF;
+        (tWriter->muoConeCF) = muoConeCF;
+        (tWriter->muoConeNCH) = muoConeNCH;
+
+        (tWriter->muoHowMany) = getNosMuons();
+
     }
 
     //------------------------------------------------TAG------------------------------------------------
@@ -530,14 +533,14 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     //CHARGE CORRELATION 
     if( muoAncestor >=0 ){
         if( TMath::Sign(1, ssBLund) == -1*trkCharge->at(itkmu) ){
-            hmass_ssB_osCC->Fill(svtMass->at(iSsB), evtWeight);
+            hmass_ssB_osCC->Fill(svtMass->at(ssbSVT), evtWeight);
             (tWriter->osMuonChargeInfo) = 1 ;
         }else{
-            hmass_ssB_osWC->Fill(svtMass->at(iSsB), evtWeight);
+            hmass_ssB_osWC->Fill(svtMass->at(ssbSVT), evtWeight);
             (tWriter->osMuonChargeInfo) = 0 ;
         }
     }else{
-        hmass_ssB_osRC->Fill(svtMass->at(iSsB), evtWeight);
+        hmass_ssB_osRC->Fill(svtMass->at(ssbSVT), evtWeight);
         (tWriter->osMuonChargeInfo) = 2 ;
     }
 
@@ -638,4 +641,14 @@ float PDAnalyzer::GetSvtCharge(int iSvt, float kappa)
 
     return QSvt; 
 
+}
+float PDAnalyzer::GetListPfcCharge(vector <int> *list, float kappa)
+{
+    float Q = 0;
+    float pt = 0;
+    for(int it:*list){
+       Q += pfcCharge->at(it) * pow(pfcPt->at(it), kappa);
+       pt += pow(pfcPt->at(it), kappa);
+    }
+    return Q/pt; 
 }
