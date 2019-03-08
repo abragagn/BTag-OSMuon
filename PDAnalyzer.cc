@@ -348,6 +348,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(writeVars){
         float kappa = 1;
         float drCharge = 0.5;
+        bool osMuonJet = false;
 
         //JET variables
         int iJet = trkJet->at(itkmu);
@@ -371,6 +372,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         int   muoJetNCH = -1;
 
         if(iJet>=0){
+            osMuonJet = true;
             vector <int> jet_pfcs = pfCandFromJet( iJet );
             vector <int> jet_tks = tracksFromJet( iJet );
 
@@ -500,6 +502,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->muoDrB) = deltaR(tB.Eta(), tB.Phi(), muoEta->at(iMuon), muoPhi->at(iMuon));
         (tWriter->muoPFIso) = GetMuoPFiso(iMuon);
 
+        (tWriter->osMuonJet) = osMuonJet;
         (tWriter->muoJetPt) = muoJetPt;
         (tWriter->muoJetPtRel) = muoJetPtRel;
         (tWriter->muoJetDr) = muoJetDr;

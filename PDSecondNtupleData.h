@@ -45,6 +45,7 @@ void initTree() {
 
 
     setBranch( "osMuon", &osMuon, "osMuon/I", &b_osMuon );
+    setBranch( "osMuonJet", &osMuonJet, "osMuonJet/I", &b_osMuonJet );
     setBranch( "osMuonTag", &osMuonTag, "osMuonTag/I", &b_osMuonTag );
     setBranch( "osMuonChargeInfo", &osMuonChargeInfo, "osMuonChargeInfo/I", &b_osMuonChargeInfo );
     setBranch( "osMuonTagMvaValue", &osMuonTagMvaValue, "osMuonTagMvaValue/F", &b_osMuonTagMvaValue );
@@ -90,7 +91,7 @@ void initTree() {
     setBranch( "muoConeCF", &muoConeCF, "muoConeCF/F", &b_muoConeCF );
     setBranch( "muoConeNCH", &muoConeNCH, "muoConeNCH/I", &b_muoConeNCH );
 
-    setBranch( "muoQCone", &muoQCone, "muoQCone/F", &b_muoQCone );
+//    setBranch( "muoQCone", &muoQCone, "muoQCone/F", &b_muoQCone );
     setBranch( "muoHowMany", &muoHowMany, "muoHowMany/I", &b_muoHowMany );
 
     setBranch( "evtNumber", &evtNumber, "evtNumber/I", &b_evtNumber );
@@ -119,12 +120,12 @@ TBranch *b_muoPt, *b_muoEta, *b_muoPhi, *b_muoDxy, *b_muoExy, *b_muoDz, *b_muoEz
 TBranch *b_muoLund, *b_muoAncestor, *b_muoSoftMvaValue;
 
 
-int osMuon, osMuonTag, osMuonChargeInfo;
+int osMuon, osMuonJet, osMuonTag, osMuonChargeInfo;
 float osMuonTagMvaValue, osMuonTagMistag;
 float muoDrB, muoDzPV, muoPFIso, muoQCone;
 int muoHowMany;
 
-TBranch *b_osMuon, *b_osMuonTag, *b_osMuonChargeInfo, *b_muoDrB, *b_muoPFIso, *b_muoQCone, *b_muoDzPV, *b_muoHowMany;
+TBranch *b_osMuon, *b_osMuonJet, *b_osMuonTag, *b_osMuonChargeInfo, *b_muoDrB, *b_muoPFIso, *b_muoQCone, *b_muoDzPV, *b_muoHowMany;
 TBranch *b_osMuonTagMvaValue, *b_osMuonTagMistag;
 
 int muoJetSize, muoJetNDau, muoJetNCH;
