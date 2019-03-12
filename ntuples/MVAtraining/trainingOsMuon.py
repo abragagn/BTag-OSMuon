@@ -14,12 +14,12 @@ import h5py
 from keras.models import Sequential
 from keras.layers import Dense, Activation, Conv2D, MaxPooling2D, Flatten, Dropout
 from keras.regularizers import l2
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 from keras.callbacks import ModelCheckpoint
 
-# Functions
-def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue = 0.5):
+##### FUNCTIONS
 
+def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue = 0.25):
     model = Sequential()
     model.add(Dense(layerSize, activation='relu', kernel_initializer='normal', input_dim=inputDim))
     if dropValue != 0:
@@ -32,12 +32,11 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 
     model.add(Dense(2, activation='softmax'))
 
-    sgd = SGD(lr=0.05, decay=1e-5, momentum=0.9, nesterov=True)
-    model.compile(loss='categorical_crossentropy', optimizer=sgd, metrics=['accuracy'])
-
+    #opt = SGD(lr=0.05, decay=1e-5, momentum=0.9, nesterov=True)
+    opt = Adam(lr=0.001)
+    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
     model.save(modelName)
     model.summary()
-
     return modelName
 
 
@@ -45,20 +44,16 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
 TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
-DNNFLAG= True
-BDTFLAG = False
-
-
 # Load data
-file = '../ntuBsMC2017.root'
+file = '../ntuBsMC2017_skim.root'
 #file ='ntu.root'
 
 data = TFile.Open(file)
 
 tree = data.Get('PDsecondTree')
 
-cut = 'osMuon==1&&hltJpsiMu==1'
-cut += '&&( (fabs(muoEta)<1.2 && muoSoftMvaValue>0.891) || (fabs(muoEta)>=1.2 && muoSoftMvaValue>0.8925) )'
+cut = 'osMuon==1&&hltJpsiMu==1&&muoJetPt != -1'
+#cut += ''
 cut += '&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)'
 
 cutSgn = cut + '&&osMuonTag==1'
@@ -67,12 +62,12 @@ cutBkg = cut + '&&osMuonTag==0'
 # Prepare factory
 
 nTest = sys.argv[1]
-layerSize = sys.argv[2]
-nLayers = sys.argv[3]
+nLayers = sys.argv[2]
+layerSize = sys.argv[3]
 dropValue = sys.argv[4]
 
-layerSize = int(layerSize)
 nLayers = int(nLayers)
+layerSize = int(layerSize)
 dropValue = float(dropValue)
 
 name = 'OsMuonHLTJpsiMu_test' + nTest
@@ -86,7 +81,7 @@ factory = TMVA.Factory('TMVAClassification', output,
 
 dataloader = TMVA.DataLoader('dataset')
 
-varList = [
+varListJetCone = [
     ('muoPt', 'F')
     ,('abs_muoEta := fabs(muoEta)', 'F')
     ,('muoDxy', 'F')
@@ -102,6 +97,27 @@ varList = [
     ,('muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize', 'I')
     ,('muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
     ]
+
+varListJet = [
+    ('muoPt', 'F')
+    ,('abs_muoEta := fabs(muoEta)', 'F')
+    ,('muoDxy', 'F')
+    ,('abs_muoDz := fabs(muoDz)', 'F')
+    ,('muoSoftMvaValue', 'F')
+    ,('muoDrB', 'F')
+    ,('muoPFIso', 'F')
+    ,('muoJetPt', 'F')
+    ,('muoJetPtRel', 'F')
+    ,('muoJetDr', 'F')
+    ,('muoJetEnergyRatio', 'F')
+    ,('muoJetDFprob', 'F')
+    ,('muoJetSize', 'I')
+    ,('muoJetNF', 'F')
+    ,('muoJetCF', 'F')
+    ,('muoJetNCH', 'I')
+    ]
+
+varList = varListJet
 
 
 nVars = 0
@@ -120,35 +136,27 @@ dataloaderOpt = 'SplitMode=Random:NormMode=NumEvents:V'
 dataloader.PrepareTrainingAndTestTree(TCut(cutSgn), TCut(cutBkg), dataloaderOpt)
 
 # Define Keras Model
-if DNNFLAG:
-    modelName = getKerasModel(nVars, 'model' + name + '.h5', layerSize, nLayers, dropValue)
+modelName = getKerasModel(nVars, 'model' + name + '.h5', layerSize, nLayers, dropValue)
 
-    # Book methods
-    dnnOptions = '!H:!V:NumEpochs=250:TriesEarlyStopping=50:BatchSize=128:FilenameModel='
+# Book methods
+dnnOptions = '!H:!V:NumEpochs=100:TriesEarlyStopping=20:BatchSize=512:FilenameModel='
 
-    dnnOptions = dnnOptions + modelName
+dnnOptions = dnnOptions + modelName
 
-    preprocessingOptions = ':VarTransform=N'
-    preprocessingOptions += ',G('
+preprocessingOptions = ':VarTransform=N'
+preprocessingOptions += ',G('
 
-    iVar = 0
-    for var in varList:
-        preprocessingOptions += '_V' + str(iVar) + '_' + ','
-        iVar += 1
+iVar = 0
+for var in varList:
+    preprocessingOptions += '_V' + str(iVar) + '_' + ','
+    iVar += 1
 
-    preprocessingOptions = preprocessingOptions[:-1]
-    preprocessingOptions +=  '),N'
+preprocessingOptions = preprocessingOptions[:-1]
+preprocessingOptions +=  '),N'
 
-    dnnName = 'DNN' + name
+dnnName = 'DNN' + name
 
-    factory.BookMethod(dataloader, TMVA.Types.kPyKeras, dnnName, dnnOptions + preprocessingOptions)
-
-# BDT
-if BDTFLAG:
-    bdtOptions = '!H:!V:UseBaggedBoost:BaggedSampleFraction=0.6:NTrees=600:MaxDepth=6:nCuts=50:MinNodeSize=1.5%:BoostType=RealAdaBoost:AdaBoostBeta=0.3:DoBoostMonitor=True:VarTransform=N'
-    bdtName = 'BDT' + name
-    factory.BookMethod(dataloader, TMVA.Types.kBDT, bdtName, bdtOptions)
-
+factory.BookMethod(dataloader, TMVA.Types.kPyKeras, dnnName, dnnOptions + preprocessingOptions)
 
 # Run training, test and evaluation
 factory.TrainAllMethods()

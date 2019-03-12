@@ -347,7 +347,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     //COMPLEX TAGGING VARIABLES
     if(writeVars){
         float kappa = 1;
-        float drCharge = 0.5;
+        float drCone = 0.4;
         bool osMuonJet = false;
 
         //JET variables
@@ -430,7 +430,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         for(int ipf=0; ipf<nPF; ++ipf){
             float pfpfc = pfcPt->at(ipf);
             float etapfc = pfcEta->at(ipf);
-            if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCharge) continue;
+            if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCone) continue;
             if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
             if(pfcTrk->at(ipf)>=0)
                 if(fabs(dZ(pfcTrk->at(ipf), ssbPVT))>=1.0) 
