@@ -19,7 +19,7 @@ from keras.callbacks import ModelCheckpoint
 
 ##### FUNCTIONS
 
-def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue = 0.25):
+def getKerasModel(inputDim, modelName, nLayers = 5, layerSize = 100, dropValue = 0.25):
     model = Sequential()
     model.add(Dense(layerSize, activation='relu', kernel_initializer='normal', input_dim=inputDim))
     if dropValue != 0:
@@ -30,6 +30,8 @@ def getKerasModel(inputDim, modelName, layerSize = 100, nLayers = 5, dropValue =
         if dropValue != 0:
             model.add(Dropout(dropValue))
 
+    # Anything below this point should not be changed in order for the network to work with TMVA
+    # Exception: the optimizer
     model.add(Dense(2, activation='softmax'))
 
     #opt = SGD(lr=0.05, decay=1e-5, momentum=0.9, nesterov=True)
@@ -46,22 +48,21 @@ TMVA.PyMethodBase.PyInitialize()
 
 # Load data
 file = '../ntuBsMC2017_skim.root'
-#file ='ntu.root'
 
 data = TFile.Open(file)
 
 tree = data.Get('PDsecondTree')
 
-cut = 'osMuon==1&&hltJpsiMu==1&&muoJetPt != -1'
-#cut += ''
-cut += '&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)'
+# Event wise selection
+cut = 'osMuon==1&&hltJpsiMu==1'
+#cut += '&&!isnan(muoDxy)&&!isnan(muoJetDFprob)&&!isinf(muoJetEnergyRatio)&&!isinf(muoConeEnergyRatio)'
 
-cutSgn = cut + '&&osMuonTag==1'
-cutBkg = cut + '&&osMuonTag==0'
+cutSgn = cut + '&&osMuonTag==1' #Correcly tagged events selection e.g if sign(charge lepton) -> correct flavour 
+cutBkg = cut + '&&osMuonTag==0' #Uncorrecly tagged events
 
 # Prepare factory
 
-nTest = sys.argv[1]
+nTest = sys.argv[1] ## just a label
 nLayers = sys.argv[2]
 layerSize = sys.argv[3]
 dropValue = sys.argv[4]
@@ -81,78 +82,82 @@ factory = TMVA.Factory('TMVAClassification', output,
 
 dataloader = TMVA.DataLoader('dataset')
 
-varListJetCone = [
+# variable list
+varList = [
     ('muoPt', 'F')
     ,('abs_muoEta := fabs(muoEta)', 'F')
     ,('muoDxy', 'F')
-    ,('abs_muoDz := fabs(muoDz)', 'F')
+    ,('muoExy', 'F')
+    ,('muoDz', 'F')
+    ,('muoEz', 'F')
     ,('muoSoftMvaValue', 'F')
     ,('muoDrB', 'F')
     ,('muoPFIso', 'F')
-    ,('muoJetConePt := muoJetPt != -1 ? muoJetPt : muoConePt', 'F')
-    ,('muoJetConePtRel := muoJetPt != -1 ? muoJetPtRel : muoConePtRel', 'F')
-    ,('muoJetConeDr := muoJetPt != -1 ? muoJetDr : muoConeDr', 'F')
-    ,('muoJetConeEnergyRatio := muoJetPt != -1 ? muoJetEnergyRatio : muoConeEnergyRatio', 'F')
+    ,('muoConePt', 'F')
+    ,('muoConePtRel', 'F')
+    ,('muoConeDr', 'F')
+    ,('muoConeEnergyRatio', 'F')
+    ,('muoConeCF', 'F')
+    ,('muoConeNCH', 'I')
     ,('muoJetDFprob', 'F')
-    ,('muoJetConeSize := muoJetPt != -1 ? muoJetSize : muoConeSize', 'I')
-    ,('muoJetConeQ := muoJetPt != -1 ? muoJetQ : muoConeQ', 'F')
     ]
 
-varListJet = [
+varListClean = [
     ('muoPt', 'F')
-    ,('abs_muoEta := fabs(muoEta)', 'F')
+    ,('muoEta', 'F')
     ,('muoDxy', 'F')
-    ,('abs_muoDz := fabs(muoDz)', 'F')
+    ,('muoExy', 'F')
+    ,('muoDz', 'F')
+    ,('muoEz', 'F')
     ,('muoSoftMvaValue', 'F')
     ,('muoDrB', 'F')
     ,('muoPFIso', 'F')
-    ,('muoJetPt', 'F')
-    ,('muoJetPtRel', 'F')
-    ,('muoJetDr', 'F')
-    ,('muoJetEnergyRatio', 'F')
-    ,('muoJetDFprob', 'F')
-    ,('muoJetSize', 'I')
-    ,('muoJetNF', 'F')
-    ,('muoJetCF', 'F')
-    ,('muoJetNCH', 'I')
+    ,('muoConeCleanPt', 'F')
+    ,('muoConeCleanPtRel', 'F')
+    ,('muoConeCleanDr', 'F')
+    ,('muoConeCleanEnergyRatio', 'F')
+    #,('muoJetDFprob', 'F')
     ]
 
-varList = varListJet
+varList = varListClean
 
-
+# automatic variable counting and adding
 nVars = 0
-
 for var in varList:
     dataloader.AddVariable( var[0], var[1] )
     nVars += 1
 
 # prepare dataloader
+# same tree, add selection later
+dataloader.AddSignalTree(tree)
+dataloader.AddBackgroundTree(tree)
 
-dataloader.AddSignalTree(tree, 1.0)
-dataloader.AddBackgroundTree(tree, 1.0)
+# evtWeight variable in the ntuple, address simulation bias
+dataloader.SetWeightExpression( 'evtWeight' );
 
-dataloaderOpt = 'SplitMode=Random:NormMode=NumEvents:V'
+dataloaderOpt = 'SplitMode=Random:NormMode=NumEvents:V:nTrain_Signal=155331:nTrain_Background=66249'
 
 dataloader.PrepareTrainingAndTestTree(TCut(cutSgn), TCut(cutBkg), dataloaderOpt)
 
-# Define Keras Model
-modelName = getKerasModel(nVars, 'model' + name + '.h5', layerSize, nLayers, dropValue)
+# Create Keras Model
+modelName = getKerasModel(nVars, 'model' + name + '.h5', nLayers, layerSize, dropValue)
 
 # Book methods
-dnnOptions = '!H:!V:NumEpochs=100:TriesEarlyStopping=20:BatchSize=512:FilenameModel='
+dnnOptions = '!H:!V:NumEpochs=50:TriesEarlyStopping=10:BatchSize=512:ValidationSize=30%'
+dnnOptions = dnnOptions + ':Tensorboard=./logs:FilenameModel=' + modelName
+# 
 
-dnnOptions = dnnOptions + modelName
+# Preprocessing string creator, loop was for selection of which variable to apply gaussianification
+preprocessingOptions = ':VarTransform=N,G,N'
+# preprocessingOptions += ',G('
 
-preprocessingOptions = ':VarTransform=N'
-preprocessingOptions += ',G('
+# iVar = 0
+# for var in varList:
+#     preprocessingOptions += '_V' + str(iVar) + '_' + ','
+#     iVar += 1
 
-iVar = 0
-for var in varList:
-    preprocessingOptions += '_V' + str(iVar) + '_' + ','
-    iVar += 1
-
-preprocessingOptions = preprocessingOptions[:-1]
-preprocessingOptions +=  '),N'
+# preprocessingOptions = preprocessingOptions[:-1]
+# preprocessingOptions +=  '),N'
 
 dnnName = 'DNN' + name
 
