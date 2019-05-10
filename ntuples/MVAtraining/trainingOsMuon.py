@@ -97,6 +97,7 @@ varList = [
     ,('muoConePtRel', 'F')
     ,('muoConeDr', 'F')
     ,('muoConeEnergyRatio', 'F')
+    ,('muoConeQ', 'F')
     ,('muoConeCF', 'F')
     ,('muoConeNCH', 'I')
     ,('muoJetDFprob', 'F')
@@ -116,6 +117,7 @@ varListClean = [
     ,('muoConeCleanPtRel', 'F')
     ,('muoConeCleanDr', 'F')
     ,('muoConeCleanEnergyRatio', 'F')
+    ,('muoConeCleanQ', 'F')
     #,('muoJetDFprob', 'F')
     ]
 
