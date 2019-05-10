@@ -35,7 +35,7 @@ PDAnalyzer::PDAnalyzer() {
     setUserParameter( "verbose", "f" );
 
     setUserParameter( "process", "BsJPsiPhi" );
-    setUserParameter( "useHLT", "false" );
+    setUserParameter( "useHLT", "true" );
     setUserParameter( "writeVars", "true" );
 
     setUserParameter( "outputFile", "ntu.root" );
@@ -83,7 +83,8 @@ void PDAnalyzer::beginJob() {
     tWriter = new PDSecondNtupleWriter; // second ntuple
     tWriter->open( getUserParameter("outputFile"), "RECREATE" ); // second ntuple
 
-    setOsMuonCuts(muonIdWp, 1.0 );
+    setOsMuonMvaCut(muonIdWp);
+    setOsMuonDzCut( 1.0 );
 
     inizializeMuonMvaReader();
     inizializeOSMuonMvaTagReader( osMuonTagMvaMethod );
@@ -192,13 +193,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     if(hlt(PDEnumString::HLT_DoubleMu4_JpsiTrk_Displaced_v)) jpsitk = true;
 
     if( !jpsimu ) return false;
-    if( jpsimu ) SetJpsiMuCut();
-    if( !jpsimu ) SetJpsiTrkTrkCut();
-
-
-    if(useHLT && process=="BsJPsiPhi" && !(jpsimu || jpsitktk)) return false;
-    if(useHLT && process=="BuJPsiK" && !(jpsimu || jpsitk)) return false;
-
+    SetJpsiMuCut();
 
 //------------------------------------------------SEARCH FOR SS---------------------------------------
 
@@ -428,21 +423,23 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         float qCone=0, ptCone=0;
 
         for(int ipf=0; ipf<nPF; ++ipf){
-            float pfpfc = pfcPt->at(ipf);
+            float ptpfc = pfcPt->at(ipf);
             float etapfc = pfcEta->at(ipf);
-            if( deltaR(etapfc, pfcPhi->at( ipf ), muoEta->at( iMuon ), muoPhi->at( iMuon )) > drCone) continue;
+            if( deltaR(etapfc, pfcPhi->at(ipf), muoEta->at(iMuon), muoPhi->at(iMuon)) > drCone) continue;
+            if(ptpfc < 0.2) continue;
+            if(fabs(etapfc) > 3.0) continue;  
             if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
             if(pfcTrk->at(ipf)>=0)
                 if(fabs(dZ(pfcTrk->at(ipf), ssbPVT))>=1.0) 
                     continue;
-            if(pfpfc < 0.2) continue;
-            if(fabs(etapfc) > 2.5) continue;        
+      
             TLorentzVector a;
             a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
             tCone += a;
             ++muoConeSize;
-            qCone += pfcCharge->at(ipf) * pow(pfpfc, kappa);
-            ptCone += pow(pfpfc, kappa);
+
+            qCone += pfcCharge->at(ipf) * pow(ptpfc, kappa);
+            ptCone += pow(ptpfc, kappa);
             if(pfcCharge->at(ipf)==0) muoConeNF += pfcE->at(ipf);
             if(abs(pfcCharge->at(ipf))==1){
                 muoConeNCH++;
@@ -466,22 +463,62 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         tCone -= tMu;
         muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
 
-        bool debugJet = false;
-        if(debugJet && muoAncestor>=0 && iJet>=0){
-            vector <int> jet_pfcs = pfCandFromJet( iJet );
-            cout<<endl;
-            printDaughterTree(muoAncestor, "");
-            cout<<endl;
-            cout<<"dXY = "<<GetMuonSignedDxy(iMuon, ssbPVT)<<endl;
-            cout<<"osB: "<<genPt->at( muoAncestor )<<" "<<genEta->at( muoAncestor )<<" "<<genPhi->at( muoAncestor )<<endl;
-            cout<<"jet: "<<jetPt->at( iJet )<<" "<<jetEta->at( iJet )<<" "<<jetPhi->at( iJet )<<endl;
-            cout<<"muo: "<<muoPt->at( iMuon )<<" "<<muoEta->at( iMuon )<<" "<<muoPhi->at( iMuon )<<endl;
-            for(int it:jet_pfcs){
-                int g = GetClosestGen( pfcEta->at(it), pfcPhi->at(it), pfcPt->at(it) );
-                if(g>=0) cout<<genId->at(g)<<" "; else cout<<"noGen ";
+
+        //CONEClean variables
+        float muoConeCleanPtRel = -1;
+        float muoConeCleanDr = -1;
+        float muoConeCleanEnergyRatio = -1;
+        int   muoConeCleanSize = 0;
+        float muoConeCleanQ = -1;
+        float muoConeCleanPt = -1;
+        float muoConeCleanNF = 0;
+        float muoConeCleanCF = 0;
+        int   muoConeCleanNCH = 0;
+
+        TLorentzVector tConeClean(0.,0.,0.,0.);
+        float qConeClean=0, ptConeClean=0;
+
+        for(int ipf=0; ipf<nPF; ++ipf){
+            float ptpfc = pfcPt->at(ipf);
+            float etapfc = pfcEta->at(ipf);
+            if( deltaR(etapfc, pfcPhi->at(ipf), muoEta->at(iMuon), muoPhi->at(iMuon)) > drCone) continue;
+            if(ptpfc < 0.5) continue;
+            if(fabs(etapfc) > 3.0) continue;
+            if(pfcCharge->at(ipf) == 0) continue;
+            if(std::find(tkSsB.begin(), tkSsB.end(), pfcTrk->at(ipf)) != tkSsB.end()) continue;
+            if(pfcTrk->at(ipf)<0) continue;
+            if(fabs(dZ(pfcTrk->at(ipf), ssbPVT))>=1.0) continue;
+      
+            TLorentzVector a;
+            a.SetPxPyPzE(pfcPx->at(ipf), pfcPy->at(ipf), pfcPz->at(ipf), pfcE->at(ipf));
+            tConeClean += a;
+            ++muoConeCleanSize;
+
+            qConeClean += pfcCharge->at(ipf) * pow(ptpfc, kappa);
+            ptConeClean += pow(ptpfc, kappa);
+            if(pfcCharge->at(ipf)==0) muoConeCleanNF += pfcE->at(ipf);
+            if(abs(pfcCharge->at(ipf))==1){
+                muoConeCleanNCH++;
+                muoConeCleanCF += pfcE->at(ipf);
             }
-            cout<<endl;
         }
+
+        if(ptConeClean != 0) qConeClean /= ptConeClean;
+        else qConeClean = 1;
+        qConeClean *= trkCharge->at(itkmu);
+        if(tConeClean.E()!=0){
+            muoConeCleanCF /= tConeClean.E();
+            muoConeCleanNF /= tConeClean.E();
+        }
+
+        muoConeCleanQ = qConeClean;
+
+        muoConeCleanPt = tConeClean.Pt();
+        muoConeCleanDr = deltaR(tConeClean.Eta(), tConeClean.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
+        muoConeCleanEnergyRatio = muoE->at(iMuon) / tConeClean.E();
+        tConeClean -= tMu;
+        muoConeCleanPtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tConeClean.Vect().Unit());
+        tConeClean += tMu; // for IP sign
 
         //------------------------------------------------FILLING------------------------------------------------
         (tWriter->muoPt) = muoPt->at( iMuon );
@@ -489,7 +526,7 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->muoPhi) = muoPhi->at(iMuon);
         (tWriter->muoCharge) = trkCharge->at(itkmu);
 
-        (tWriter->muoDxy) = GetMuonSignedDxy(iMuon, ssbPVT);
+        (tWriter->muoDxy) = dSign(itkmu, tConeClean.Px(), tConeClean.Py())*abs(trkDxy->at(itkmu));
         (tWriter->muoDz) = dZ(itkmu, ssbPVT);
         (tWriter->muoExy) = trkExy->at(itkmu);
         (tWriter->muoEz) = trkEz->at(itkmu);
@@ -526,6 +563,16 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
         (tWriter->muoConeNF) = muoConeNF;
         (tWriter->muoConeCF) = muoConeCF;
         (tWriter->muoConeNCH) = muoConeNCH;
+
+        (tWriter->muoConeCleanPt) = muoConeCleanPt;
+        (tWriter->muoConeCleanPtRel) = muoConeCleanPtRel;
+        (tWriter->muoConeCleanDr) = muoConeCleanDr;
+        (tWriter->muoConeCleanEnergyRatio) = muoConeCleanEnergyRatio;
+        (tWriter->muoConeCleanQ) = muoConeCleanQ;
+        (tWriter->muoConeCleanSize) = muoConeCleanSize;
+        (tWriter->muoConeCleanNF) = muoConeCleanNF;
+        (tWriter->muoConeCleanCF) = muoConeCleanCF;
+        (tWriter->muoConeCleanNCH) = muoConeCleanNCH;
 
         (tWriter->muoHowMany) = getNosMuons();
 

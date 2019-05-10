@@ -64,7 +64,6 @@ void initTree() {
     setBranch( "muoSoftMvaValue", &muoSoftMvaValue, "muoSoftMvaValue/F", &b_muoSoftMvaValue );
 
     setBranch( "muoDrB", &muoDrB, "muoDrB/F", &b_muoDrB );
-//    setBranch( "muoDzPV", &muoDzPV, "muoDzPV/F", &b_muoDzPV );
     setBranch( "muoPFIso", &muoPFIso, "muoPFIso/F", &b_muoPFIso );
 
     setBranch( "muoJetPt", &muoJetPt, "muoJetPt/F", &b_muoJetPt );
@@ -72,7 +71,6 @@ void initTree() {
     setBranch( "muoJetDr", &muoJetDr, "muoJetDr/F", &b_muoJetDr );
     setBranch( "muoJetEnergyRatio", &muoJetEnergyRatio, "muoJetEnergyRatio/F", &b_muoJetEnergyRatio );
     setBranch( "muoJetQ", &muoJetQ, "muoJetQ/F", &b_muoJetQ );
-//    setBranch( "muoJetQtight", &muoJetQtight, "muoJetQtight/F", &b_muoJetQtight );
     setBranch( "muoJetCSV", &muoJetCSV, "muoJetCSV/F", &b_muoJetCSV );
     setBranch( "muoJetDFprob", &muoJetDFprob, "muoJetDFprob/F", &b_muoJetDFprob );
     setBranch( "muoJetSize", &muoJetSize, "muoJetSize/I", &b_muoJetSize );
@@ -91,7 +89,16 @@ void initTree() {
     setBranch( "muoConeCF", &muoConeCF, "muoConeCF/F", &b_muoConeCF );
     setBranch( "muoConeNCH", &muoConeNCH, "muoConeNCH/I", &b_muoConeNCH );
 
-//    setBranch( "muoQCone", &muoQCone, "muoQCone/F", &b_muoQCone );
+    setBranch( "muoConeCleanPt", &muoConeCleanPt, "muoConeCleanPt/F", &b_muoConeCleanPt );
+    setBranch( "muoConeCleanPtRel", &muoConeCleanPtRel, "muoConeCleanPtRel/F", &b_muoConeCleanPtRel );
+    setBranch( "muoConeCleanDr", &muoConeCleanDr, "muoConeCleanDr/F", &b_muoConeCleanDr );
+    setBranch( "muoConeCleanEnergyRatio", &muoConeCleanEnergyRatio, "muoConeCleanEnergyRatio/F", &b_muoConeCleanEnergyRatio );
+    setBranch( "muoConeCleanQ", &muoConeCleanQ, "muoConeCleanQ/F", &b_muoConeCleanQ );
+    setBranch( "muoConeCleanSize", &muoConeCleanSize, "muoConeCleanSize/I", &b_muoConeCleanSize );
+    setBranch( "muoConeCleanNF", &muoConeCleanNF, "muoConeCleanNF/F", &b_muoConeCleanNF );
+    setBranch( "muoConeCleanCF", &muoConeCleanCF, "muoConeCleanCF/F", &b_muoConeCleanCF );
+    setBranch( "muoConeCleanNCH", &muoConeCleanNCH, "muoConeCleanNCH/I", &b_muoConeCleanNCH );
+
     setBranch( "muoHowMany", &muoHowMany, "muoHowMany/I", &b_muoHowMany );
 
     setBranch( "evtNumber", &evtNumber, "evtNumber/I", &b_evtNumber );
@@ -111,14 +118,12 @@ TBranch *b_ssbPt, *b_ssbEta, *b_ssbPhi, *b_ssbMass, *b_jpsiMass, *b_ssbDxy, *b_s
 TBranch *b_ssbLxy, *b_ssbCt2D, *b_ssbCt2DErr, *b_ssbCt2DSigmaUnit, *b_ssbCt3D, *b_ssbCt3DErr, *b_ssbCt3DSigmaUnit;
 TBranch *b_ssbSVT, *b_ssbPVT, *b_ssbLund, *b_evtNumber, *b_hltJpsiMu, *b_hltJpsiTrkTrk, *b_hltJpsiTrk, *b_ssbIsTight, *b_evtWeight, *b_evtNb;
 
-
 int muoLund, muoAncestor, muoCharge;
 float muoSoftMvaValue;
 float muoPt, muoEta, muoPhi, muoDxy, muoExy, muoDz, muoEz;
 
 TBranch *b_muoPt, *b_muoEta, *b_muoPhi, *b_muoDxy, *b_muoExy, *b_muoDz, *b_muoEz, *b_muoCharge;
 TBranch *b_muoLund, *b_muoAncestor, *b_muoSoftMvaValue;
-
 
 int osMuon, osMuonJet, osMuonTag, osMuonChargeInfo;
 float osMuonTagMvaValue, osMuonTagMistag;
@@ -129,15 +134,22 @@ TBranch *b_osMuon, *b_osMuonJet, *b_osMuonTag, *b_osMuonChargeInfo, *b_muoDrB, *
 TBranch *b_osMuonTagMvaValue, *b_osMuonTagMistag;
 
 int muoJetSize, muoJetNDau, muoJetNCH;
-float muoJetPtRel, muoJetDr, muoJetEnergyRatio, muoJetQ, muoJetQtight, muoJetCSV, muoJetDFprob, muoJetPt;
-float muoJetNF, muoJetCF, muoConeNF, muoConeCF;
-
-int muoConeSize, muoConeNCH;
-float muoConePtRel, muoConeDr, muoConeEnergyRatio, muoConeQ, muoConeCSV, muoConeDFprob, muoConePt;
+float muoJetPtRel, muoJetDr, muoJetEnergyRatio, muoJetQ, muoJetQtight, muoJetCSV, muoJetDFprob, muoJetPt, muoJetNF, muoJetCF;
 
 TBranch *b_muoJetSize, *b_muoJetPtRel, *b_muoJetDr, *b_muoJetEnergyRatio, *b_muoJetQ, *b_muoJetQtight, *b_muoJetCSV, *b_muoJetDFprob, *b_muoJetPt;
-TBranch *b_muoJetNDau, *b_muoJetNF, *b_muoJetCF, *b_muoJetNCH, *b_muoConeNF, *b_muoConeCF, *b_muoConeNCH;
+TBranch *b_muoJetNDau, *b_muoJetNF, *b_muoJetCF, *b_muoJetNCH;
+
+int muoConeSize, muoConeNCH;
+float muoConePtRel, muoConeDr, muoConeEnergyRatio, muoConeQ, muoConeCSV, muoConeDFprob, muoConePt, muoConeNF, muoConeCF;
+
+TBranch *b_muoConeNF, *b_muoConeCF, *b_muoConeNCH;
 TBranch *b_muoConeSize, *b_muoConePtRel, *b_muoConeDr, *b_muoConeEnergyRatio, *b_muoConeQ, *b_muoConeCSV, *b_muoConeDFprob, *b_muoConePt;
+
+int muoConeCleanSize, muoConeCleanNCH;
+float muoConeCleanPtRel, muoConeCleanDr, muoConeCleanEnergyRatio, muoConeCleanQ, muoConeCleanCSV, muoConeCleanDFprob, muoConeCleanPt, muoConeCleanNF, muoConeCleanCF;
+
+TBranch *b_muoConeCleanNF, *b_muoConeCleanCF, *b_muoConeCleanNCH;
+TBranch *b_muoConeCleanSize, *b_muoConeCleanPtRel, *b_muoConeCleanDr, *b_muoConeCleanEnergyRatio, *b_muoConeCleanQ, *b_muoConeCleanCSV, *b_muoConeCleanDFprob, *b_muoConeCleanPt;
 
 private:
 
