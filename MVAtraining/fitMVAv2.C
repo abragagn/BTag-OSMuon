@@ -354,30 +354,35 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     }
     auto *gCalRes = new TGraphErrors(vX.size(),&vX[0],&wResY[0],0,&wResEY[0]);
 
+
     auto *c1 = new TCanvas("c1","c1",1000,1600);
-    c1->Divide(1,2);
-    c1->cd(1);
+    TPad *pad1 = new TPad("pad1", "",0.0,0.3,1.0,1.0);
+    TPad *pad2 = new TPad("pad2", "",0.0,0.0,1.0,0.3);
+    pad1->Draw();
+    pad2->Draw();
+
+    pad1->cd();
     gPad->SetGrid();
     gCal->SetMarkerStyle(20);
     gCal->SetMarkerSize(1);
-    gCal->SetMaximum(1.1);
+    gCal->SetMaximum(1.02);
     gCal->SetMinimum(0);
-    gCal->GetXaxis()->SetLimits(0.0,0.9);
+    gCal->GetXaxis()->SetLimits(0.0,1.02);
     gCal->SetTitle("");
     gCal->GetXaxis()->SetTitle("mistag calc.");
     gCal->GetYaxis()->SetTitle("mistag meas.");
     gCal->Draw("APZ");
     fCal->Draw("same");
-    
-    c1->cd(2);
+
+    pad2->cd();
     gPad->SetGrid();
     gCalRes->SetMarkerStyle(20);
     gCalRes->SetMarkerSize(1);
-    gCalRes->GetXaxis()->SetLimits(0.0,0.9);
+    gCalRes->GetXaxis()->SetLimits(0.0,1.02);
     gCalRes->Draw("APZ");
     gCalRes->SetTitle("");
     gCalRes->GetYaxis()->SetTitle("# std dev");
-    auto *y0_ = new TF1("","0.",0.,1.);
+    auto *y0_ = new TF1("","0.",0.,1.02);
     y0_->SetLineColor(kBlack);
     y0_->Draw("SAME");
 
