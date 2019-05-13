@@ -183,7 +183,6 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     cout<<"----- BEGIN LOOP"<<endl;
 
     if(nEvents_ == -1) nEvents_ = t->GetEntries();
-    int nTot = 0;
 
     for(int i=0; i<nEvents_; ++i){
         if(i%100000==0) cout<<"----- at event "<<i<<endl;
@@ -193,7 +192,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         //EVENT SELECTION
         if(!hltJpsiMu) continue;
         if(useTightSelection_ && !ssbIsTight) continue;
-        nTot += (int)evtWeight;
+        hMass->Fill(ssbMass, evtWeight);
 
         //MUON SELECTION
         if(!osMuon) continue;
@@ -211,7 +210,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         mvaValue = reader.EvaluateMVA(method_);
         mva->Fill(mvaValue, evtWeight);
         evtW[0] = 1-mvaValue;
-        totalP += pow(1.-2.*evtW[0] ,2)*evtWeight;
+        totalP += pow(1.-2.*evtW[0], 2)*evtWeight;
 
         int evtTag = -1*osMuonCharge;
         bool isTagRight = TMath::Sign(1, ssbLund) == evtTag;
@@ -238,8 +237,9 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     cout<<"----- EVENTS LOOP ENDED"<<endl;
 
     // PERFORMANCE OUTPUT
-    int nRT = hMassRT->Integral(); //Integral() take in consideration weight, GetEntries() not
+    int nRT = hMassRT->Integral(); //Integral() takes in consideration event weights
     int nWT = hMassWT->Integral();
+    int nTot = hMass->Integral();
 
     if(isData){ //for data fit mass
         nRT = CountEventsWithFit(hMassRT, "histTotMass_RT").first;
@@ -261,6 +261,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
 
     cout<<endl;
     cout<<"Per-event-mistag power = "<<100.*totalP/(float)nTot<<"%"<<endl;
+    cout<<endl;
 
     // CALIBRATION
     for(int j=0;j<nBinCal;++j){
@@ -310,9 +311,9 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         vEY.push_back(wMeasErr);
 
         totalPcal += (calRT.first+calWT.first)*pow(1-2*wMeas,2);
-        cout<<"BIN "<<j<<", wCalc "<<wCalc[j];
-        cout<<", nRT "<<calRT.first<<"+-"<<calRT.second<<", nWT "<<calWT.first<<"+-"<<calWT.second;
-        cout<<", wMeas "<<wMeas <<" +- "<<wMeasErr<<endl;
+        cout<<"BIN "<<j<<" -- wCalc "<<wCalc[j];
+        cout<<" -- nRT "<<calRT.first<<" +- "<<calRT.second<<" -- nWT "<<calWT.first<<" +- "<<calWT.second;
+        cout<<" -- wMeas "<<wMeas <<" +- "<<wMeasErr<<endl;
 
     }
 
