@@ -32,7 +32,7 @@ int nBins_ = 50;
 
 pair<float, float> CountEventsWithFit(TH1 *hist, TString name);
 
-void fitMVA(TString file_ = "ntuBsMC2017.root"
+void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
     , TString method_ = "TMVAOsMuonHLTJpsiMu_test322"
     , bool useTightSelection_ = false
     , int nEvents_ = -1
@@ -49,7 +49,7 @@ void fitMVA(TString file_ = "ntuBsMC2017.root"
     cout<<"nEvents_ "<<nEvents_<<endl;
 
     cout<<endl<<"----- BEGIN CODE"<<endl;
-    TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/ntuples/";
+    TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/";
     TString methodpath = "MVAtraining/dataset/weights/TMVAClassification_";
 
     auto *f = new TFile(path + file_);
