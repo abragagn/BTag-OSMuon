@@ -47,7 +47,7 @@ TMVA.Tools.Instance()
 TMVA.PyMethodBase.PyInitialize()
 
 # Load data
-file = '../ntuBsMC2017_skim.root'
+file = '../ntuples/ntuBsMC2017_skim.root'
 
 data = TFile.Open(file)
 

@@ -35,7 +35,7 @@ int nBins_ = 50;
 pair<float, float> CountEventsWithFit(TH1 *hist, TString name);
 
 void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
-    , TString method_ = "TMVAOsMuonHLTJpsiMu_test322"
+    , TString method_ = "DNNOsMuonHLTJpsiMu_test322"
     , bool useTightSelection_ = false
     , int nEvents_ = -1
     )
