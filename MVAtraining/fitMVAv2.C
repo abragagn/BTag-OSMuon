@@ -17,11 +17,13 @@
 #include "TF1.h"
 #include "TString.h"
 #include "TMath.h"
+#include "TEfficiency.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
 #include "TGraphAsymmErrors.h"
 #include "TCanvas.h"
 #include "Math/MinimizerOptions.h"
+#include "TFitResult.h"
 
 using namespace std;
 
@@ -32,7 +34,7 @@ int nBins_ = 50;
 
 pair<float, float> CountEventsWithFit(TH1 *hist, TString name);
 
-void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
+void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     , TString method_ = "TMVAOsMuonHLTJpsiMu_test322"
     , bool useTightSelection_ = false
     , int nEvents_ = -1
@@ -93,10 +95,10 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
     TH1F *hMassCalWT[nBinCal];
     float *wCalc = new float[nBinCal]; // measured mistag rate
 
-    for(int j=0;j<nBinCal;++j){
-        hMassCalRT[j] = new TH1f(TString::Format("mbRT%i", i),"",nBins_, min_, max_);
-        hMassCalWT[j] = new TH1f(TString::Format("mbWT%i", i),"",nBins_, min_, max_);
-        wCalc[j] = 0.;
+    for(int i=0;i<nBinCal;++i){
+        hMassCalRT[i] = new TH1F(TString::Format("mbRT%i", i),"",nBins_, min_, max_);
+        hMassCalWT[i] = new TH1F(TString::Format("mbWT%i", i),"",nBins_, min_, max_);
+        wCalc[i] = 0.;
     }
 
     //MVA VARIABLES
@@ -190,7 +192,7 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
 
         //EVENT SELECTION
         if(!hltJpsiMu) continue;
-        if(useTightSelection && !ssbIsTight) continue;
+        if(useTightSelection_ && !ssbIsTight) continue;
         nTot += (int)evtWeight;
 
         //MUON SELECTION
@@ -198,7 +200,7 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
         if(muoSoftMvaValue<=0.35) continue;
 
         //NAN INF VARIABLES BUG FIX
-        bool nanFlag = isnan(muoDxy) || isnan(muoJetDFprob);
+        bool nanFlag = isnan(muoDxy); // || isnan(muoJetDFprob);
         bool infFlag = isinf(muoConeCleanEnergyRatio);
         if(nanFlag || infFlag) continue;
 
@@ -284,7 +286,7 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
         calRT.second = sqrt(calRT.first);
         calWT.second = sqrt(calWT.first);
 
-        if( calRT<=minEntries && calWT<=minEntries ) continue;
+        if( calRT.first<=minEntries && calWT.first<=minEntries ) continue;
 
         wMeasErr = (TEfficiency::AgrestiCoull(calWT.first+calRT.first, calWT.first,0.6827,true)
                    -TEfficiency::AgrestiCoull(calWT.first+calRT.first, calWT.first,0.6827,false))/2;
@@ -294,9 +296,9 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
             if(calRT.first<rebinThr) hMassCalRT[j]->Rebin();
             if(calWT.first<rebinThr) hMassCalWT[j]->Rebin();
             if(calRT.first >= minEntries)
-                calRT = CountEventsWithFit(hMassRT[j], TString::Format("hMassRT%i", j));
+                calRT = CountEventsWithFit(hMassCalRT[j], TString::Format("hMassCalRT%i", j));
             if(calWT.first >= minEntries)
-                calWT = CountEventsWithFit(hMassWT[j], TString::Format("hMassWT%i", j));
+                calWT = CountEventsWithFit(hMassCalWT[j], TString::Format("hMassCalWT%i", j));
             wMeasErr = sqrt(pow(calWT.first,2)*pow(calRT.second,2) 
                            + pow(calRT.first,2)*pow(calWT.second,2))/pow(calRT.first+calWT.first,2);
         }
@@ -307,9 +309,9 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
         vY.push_back( wMeas ); // measured mistag
         vEY.push_back(wMeasErr);
 
-        totalPcal += (calRT.first+calWT.first)*pow(1-2*wMeas[j],2);
+        totalPcal += (calRT.first+calWT.first)*pow(1-2*wMeas,2);
         cout<<"BIN "<<j<<", wCalc "<<wCalc[j];
-        cout<<", nRT "<<nMassRT.first<<"+-"<<calRT.second<<", nWT "<<nMassWT.first<<"+-"<<calWT.second;
+        cout<<", nRT "<<calRT.first<<"+-"<<calRT.second<<", nWT "<<calWT.first<<"+-"<<calWT.second;
         cout<<", wMeas "<<wMeas <<" +- "<<wMeasErr<<endl;
 
     }
@@ -318,12 +320,12 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
     auto *fCal = new TF1("fCal","[0]+[1]*x",0.,1.);
 
     gCal->Fit("fCal");
-    fCal = gCal->GetFunction("fCheck");
+    fCal = gCal->GetFunction("fCal");
 
     vector<float> wResY;
     vector<float> wResEY;
     for (unsigned int j=0;j<vX.size();++j) { 
-        wResY.push_back((vY[j] - myfunc->Eval(vX[j]))/vEY[j]);
+        wResY.push_back((vY[j] - fCal->Eval(vX[j]))/vEY[j]);
         wResEY.push_back(1.);
     }
     auto *gCalRes = new TGraphErrors(vX.size(),&vX[0],&wResY[0],0,&wResEY[0]);
@@ -343,17 +345,17 @@ void fitMVA(TString file_ = "./ntuples/ntuBsMC2017.root"
     gCal->Draw("APZ");
     fCal->Draw("same");
     c1->cd(2);
-    gCalres->SetMarkerStyle(20);
-    gCalres->SetMarkerSize(1);
-    gCalres->GetXaxis()->SetLimits(0.0,0.9);
-    gCalres->Draw("APZ");
-    gCalres->SetTitle("");
-    gCalres->GetYaxis()->SetTitle("# std dev");
+    gCalRes->SetMarkerStyle(20);
+    gCalRes->SetMarkerSize(1);
+    gCalRes->GetXaxis()->SetLimits(0.0,0.9);
+    gCalRes->Draw("APZ");
+    gCalRes->SetTitle("");
+    gCalRes->GetYaxis()->SetTitle("# std dev");
     auto *y0_ = new TF1("","0.",0.,1.);
     y0_->SetLineColor(kBlack);
     y0_->Draw("SAME");
 
-    c1->Print(dirPath_ + "/" + "calibration" + process_ + TString::Format("_TYPE%i.pdf", i));
+    c1->Print(dirPath_ + "/" + "calibration" + process_ + ".pdf");
 
     f->Close();
     delete f;
