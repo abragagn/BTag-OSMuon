@@ -38,6 +38,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     , TString method_ = "DNNOsMuonHLTJpsiMu_test322"
     , bool useTightSelection_ = false
     , int nEvents_ = -1
+    , int nBinCal_ = 25 // number of bin for calibration
     )
 {
 
@@ -88,14 +89,15 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     double totalP = 0.; // total tagging power
     double totalPcal = 0.;
 
-    int nBinCal = 25; // number of bin for calibration
-    double pass = 1./nBinCal;
+    double pass = 1./nBinCal_;
 
-    TH1F *hMassCalRT[nBinCal];
-    TH1F *hMassCalWT[nBinCal];
-    double *wCalc = new double[nBinCal]; // measured mistag rate
+    TH1F *hMassCalRT[nBinCal_];
+    TH1F *hMassCalWT[nBinCal_];
+    double *wCalc = new double[nBinCal_]; // measured mistag rate
+    double *wCalcEdgeL = new double[nBinCal_];
+    double *wCalcEdgeH = new double[nBinCal_];
 
-    for(int i=0;i<nBinCal;++i){
+    for(int i=0;i<nBinCal_;++i){
         hMassCalRT[i] = new TH1F(TString::Format("mbRT%i", i),"",nBins_, min_, max_);
         hMassCalWT[i] = new TH1F(TString::Format("mbWT%i", i),"",nBins_, min_, max_);
         wCalc[i] = 0.;
@@ -216,11 +218,12 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         bool isTagRight = TMath::Sign(1, ssbLund) == evtTag;
         if(isTagRight!=osMuonTag) cout<<"!!!! isTagRight != osMuonTag"<<endl;
 
-        for(int j=0;j<nBinCal;++j){
+        for(int j=0;j<nBinCal_;++j){
             if( (evtW[0]>=(double)j*pass) && (evtW[0]<((double)j*pass+pass)) ){
                 if(isTagRight) hMassCalRT[j]->Fill(ssbMass, evtWeight);
                 else           hMassCalWT[j]->Fill(ssbMass, evtWeight);
                 wCalc[j] += evtW[0]*evtWeight;
+                break;
             }
         }
         hMassTagged->Fill(ssbMass, evtWeight);
@@ -264,7 +267,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     cout<<endl;
 
     // CALIBRATION
-    for(int j=0;j<nBinCal;++j){
+    for(int j=0;j<nBinCal_;++j){
         wCalc[j] /= (hMassCalRT[j]->Integral() + hMassCalWT[j]->Integral());
     }
 
@@ -280,7 +283,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     int minEntries = 10;
     int rebinThr = 5000;
 
-    for(int j=0;j<nBinCal;++j){
+    for(int j=0;j<nBinCal_;++j){
         pair<double, double> calRT; // .first = nEvt; .second = sigma(nEvt)
         pair<double, double> calWT;
         double wMeas;
@@ -316,6 +319,8 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         }
 
         vX.push_back( wCalc[j] );
+        vEXL.push_back( wCalc[j] - ((double)j*pass) );
+        vEXH.push_back( ((double)j*pass+pass) - wCalc[j] );
         vY.push_back( wMeas ); // measured mistag
         vEY.push_back(wMeasErr);
         vEYL.push_back(wMeasErrL);
@@ -331,10 +336,11 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     cout<<endl;
 
     auto *gCal = new TGraphAsymmErrors(vX.size(),&vX[0],&vY[0],0,0,&vEYL[0],&vEYH[0]);
-    auto *fCal = new TF1("fCal","[0]+[1]*x",0.,1.);
+    auto *gCalBin = new TGraphAsymmErrors(vX.size(),&vX[0],&vY[0],&vEXL[0],&vEXH[0],0,0);
+    auto *fCal = new TF1("osMuonCal","[0]+[1]*x",0.,1.);
 
-    gCal->Fit("fCal");
-    fCal = gCal->GetFunction("fCal");
+    gCal->Fit("osMuonCal");
+    fCal = gCal->GetFunction("osMuonCal");
 
     double q = fCal->GetParameter(0);
     double m = fCal->GetParameter(1);
@@ -352,8 +358,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         wResY.push_back(dev/vEY[j]);
         wResEY.push_back(1.);
     }
-    auto *gCalRes = new TGraphErrors(vX.size(),&vX[0],&wResY[0],0,&wResEY[0]);
-
+    auto *gCalRes = new TGraphAsymmErrors(vX.size(),&vX[0],&wResY[0],&vEXL[0],&vEXH[0],&wResEY[0],&wResEY[0]);
 
     auto *c1 = new TCanvas("c1","c1",1000,1600);
     TPad *pad1 = new TPad("pad1", "",0.0,0.3,1.0,1.0);
@@ -372,6 +377,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     gCal->GetXaxis()->SetTitle("mistag calc.");
     gCal->GetYaxis()->SetTitle("mistag meas.");
     gCal->Draw("APZ");
+    gCalBin->Draw("EZ same");
     fCal->Draw("same");
 
     pad2->cd();
@@ -381,13 +387,19 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     gCalRes->GetXaxis()->SetLimits(0.0,1.02);
     gCalRes->Draw("APZ");
     gCalRes->SetTitle("");
-    gCalRes->GetYaxis()->SetTitle("# std dev");
+    gCalRes->GetYaxis()->SetTitle("# s.d.");
     auto *y0_ = new TF1("","0.",0.,1.02);
     y0_->SetLineColor(kBlack);
     y0_->Draw("SAME");
 
     c1->Print(dirPath_ + "/" + "calibration" + process_ + ".pdf");
 
+    //FUNCTIONS
+    auto *fo = new TFile("OSMuonTaggerCalibration" + process_ + ".root", "RECREATE");
+    fo->cd();
+    fCal->Write();
+    fo->Close();
+    delete fo;
     f->Close();
     delete f;
     return;
