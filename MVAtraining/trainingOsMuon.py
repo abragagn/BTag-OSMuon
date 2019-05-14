@@ -71,7 +71,7 @@ nLayers = int(nLayers)
 layerSize = int(layerSize)
 dropValue = float(dropValue)
 
-name = 'OsMuonHLTJpsiMu_test' + nTest
+name = 'OsMuonHLTJpsiMu_' + nTest
 
 outputName = 'TMVA' + name + '.root'
 
@@ -145,7 +145,7 @@ dataloader.PrepareTrainingAndTestTree(TCut(cutSgn), TCut(cutBkg), dataloaderOpt)
 modelName = getKerasModel(nVars, 'model' + name + '.h5', nLayers, layerSize, dropValue)
 
 # Book methods
-dnnOptions = '!H:!V:NumEpochs=50:TriesEarlyStopping=10:BatchSize=512:ValidationSize=30%'
+dnnOptions = '!H:!V:NumEpochs=35:TriesEarlyStopping=-1:BatchSize=512:ValidationSize=30%:SaveBestOnly=false'
 dnnOptions = dnnOptions + ':Tensorboard=./logs:FilenameModel=' + modelName
 # 
 
