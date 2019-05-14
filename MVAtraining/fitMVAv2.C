@@ -35,7 +35,7 @@ int nBins_ = 50;
 pair<double, double> CountEventsWithFit(TH1 *hist, TString name);
 
 void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
-    , TString method_ = "DNNOsMuonHLTJpsiMu_test322"
+    , TString method_ = "DNNOsMuonHLTJpsiMu_31025"
     , bool useTightSelection_ = false
     , int nEvents_ = -1
     , int nBinCal_ = 25 // number of bin for calibration
@@ -46,10 +46,10 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     gStyle->SetOptFit();
 
     cout<<"----- Parameters -----"<<endl;
-    cout<<"file_ "<<file_<<endl;
-    cout<<"method_ "<<method_<<endl;
-    cout<<"useTightSelection_ "<<useTightSelection_<<endl;
-    cout<<"nEvents_ "<<nEvents_<<endl;
+    cout<<"file_ = "<<file_<<endl;
+    cout<<"method_ = "<<method_<<endl;
+    cout<<"useTightSelection_ = "<<useTightSelection_<<endl;
+    cout<<"nEvents_ = "<<nEvents_<<endl;
 
     cout<<endl<<"----- BEGIN CODE"<<endl;
     TString path = "/lustre/cmswork/abragagn/BPH/BTag/OSMuon/src/PDAnalysis/Ntu/bin/";
@@ -87,7 +87,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     // PER-EVENT VARIABLES
     double evtW[2] = {-1., -1.}; // per-event mistag rate
     double totalP = 0.; // total tagging power
-    double totalPcal = 0.;
+    double totalPbinned = 0.;
 
     double pass = 1./nBinCal_;
 
@@ -252,6 +252,7 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
 
     double effBase = (double)(nRT+nWT)/nTot;
     double wBase = (double)nWT/(nRT+nWT);
+    double pBase = effBase*pow(1.-2.*wBase,2);
 
     cout<<"nTot "<<nTot<<endl;
     cout<<"nRT "<<nRT<<endl;
@@ -260,10 +261,11 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     cout<<endl;
     cout<<"Base efficiency = "<<100*effBase<<"%"<<endl;
     cout<<"Base mistag = "<<100*wBase<<"%"<<endl;
-    cout<<"Base power = "<<100*effBase*pow(1.-2.*wBase,2)<<"%"<<endl;
+    cout<<"Base power = "<<100*pBase<<"%"<<endl;
 
+    totalP /= (double)nTot;
     cout<<endl;
-    cout<<"Per-event-mistag power = "<<100.*totalP/(double)nTot<<"%"<<endl;
+    cout<<"Per-event-mistag power = "<<100.*totalP<<"% (+"<<100*(totalP - pBase)/pBase<<"%)"<<endl;
     cout<<endl;
 
     // CALIBRATION
@@ -280,7 +282,8 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     vector<double> vEYL;
     vector<double> vEYH;
 
-    int minEntries = 10;
+    int minEntries = 0;
+    if(isData) minEntries = 25;
     int rebinThr = 5000;
 
     for(int j=0;j<nBinCal_;++j){
@@ -326,17 +329,22 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
         vEYL.push_back(wMeasErrL);
         vEYH.push_back(wMeasErrH);
 
-        totalPcal += (calRT.first+calWT.first)*pow(1-2*wMeas,2);
+        totalPbinned += (calRT.first+calWT.first)*pow(1-2*wMeas,2);
         cout<<"BIN "<<j<<" -- wCalc "<<wCalc[j];
         cout<<" -- nRT "<<calRT.first<<" +- "<<calRT.second<<" -- nWT "<<calWT.first<<" +- "<<calWT.second;
         cout<<" -- wMeas "<<wMeas <<" +- "<<wMeasErr<<endl;
-
     }
+
+    totalPbinned /= (double)nTot;
+
+    cout<<endl;
+    cout<<"Per-event-mistag power (binned) = "<<100.*totalPbinned<<"% (+"<<100*(totalPbinned - pBase)/pBase<<"%)"<<endl;
+    cout<<endl;
 
     cout<<endl;
 
     auto *gCal = new TGraphAsymmErrors(vX.size(),&vX[0],&vY[0],0,0,&vEYL[0],&vEYH[0]);
-    auto *gCalBin = new TGraphAsymmErrors(vX.size(),&vX[0],&vY[0],&vEXL[0],&vEXH[0],0,0);
+    auto *gCalErr = new TGraphAsymmErrors(vX.size(),&vX[0],&vY[0],&vEXL[0],&vEXH[0],&vEYL[0],&vEYH[0]);
     auto *fCal = new TF1("osMuonCal","[0]+[1]*x",0.,1.);
 
     gCal->Fit("osMuonCal");
@@ -376,8 +384,8 @@ void fitMVAv2(TString file_ = "./ntuples/ntuBsMC2017.root"
     gCal->SetTitle("");
     gCal->GetXaxis()->SetTitle("mistag calc.");
     gCal->GetYaxis()->SetTitle("mistag meas.");
-    gCal->Draw("APZ");
-    gCalBin->Draw("EZ same");
+    gCal->Draw("AP");
+    gCalErr->Draw("EZ same");
     fCal->Draw("same");
 
     pad2->cd();
@@ -467,7 +475,7 @@ pair<double, double> CountEventsWithFit(TH1 *hist, TString name = "hist"){
     auto c5 = new TCanvas();
     hist->SetMarkerStyle(20);
     hist->SetMarkerSize(.75);
-    TFitResultPtr r = hist->Fit("func","MRLS");
+    TFitResultPtr r = hist->Fit("func","MRLSQ");
     hist->Draw("PE");
     hist->SetMinimum(0);
 
