@@ -298,10 +298,10 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
     int tagDecision = getOsMuonTag();
 
     if( tagDecision == 0 ){
-        (tWriter->osMuon) = 0 ;
-        (tWriter->osMuonTag) = -1 ;
+        (tWriter->osMuon) = 0;
+        (tWriter->osMuonTag) = -1;
         (tWriter->osMuonChargeInfo) = -1;
-        (tWriter->evtNumber)= event_tot ;
+        (tWriter->evtNumber) = event_tot;
         tWriter->fill();
         return true;
     }
@@ -391,7 +391,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
             TVector3 vJet(tJet.Px(), tJet.Py(), tJet.Pz());
             muoJetPt = tJet.Pt();
             muoJetDr = deltaR(tJet.Eta(), tJet.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-            muoJetEnergyRatio = muoE->at(iMuon) / tJet.E();
+            if(tJet.E() != 0) muoJetEnergyRatio = muoE->at(iMuon) / tJet.E();
+            else muoJetEnergyRatio = 1;
             vJet -= vMu;
             muoJetPtRel = muoPt->at( iMuon ) * (vMu.Unit() * vJet.Unit());
             muoJetSize = pfToKeep.size();
@@ -459,7 +460,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
         muoConePt = tCone.Pt();
         muoConeDr = deltaR(tCone.Eta(), tCone.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-        muoConeEnergyRatio = muoE->at(iMuon) / tCone.E();
+        if(tCone.E() !=0 ) muoConeEnergyRatio = muoE->at(iMuon) / tCone.E();
+        else muoConeEnergyRatio = 1;
         tCone -= tMu;
         muoConePtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tCone.Vect().Unit());
 
@@ -515,7 +517,8 @@ bool PDAnalyzer::analyze( int entry, int event_file, int event_tot ) {
 
         muoConeCleanPt = tConeClean.Pt();
         muoConeCleanDr = deltaR(tConeClean.Eta(), tConeClean.Phi(), muoEta->at( iMuon ), muoPhi->at(iMuon));
-        muoConeCleanEnergyRatio = muoE->at(iMuon) / tConeClean.E();
+        if(tConeClean.E()!=0) muoConeCleanEnergyRatio = muoE->at(iMuon) / tConeClean.E();
+        else muoConeCleanEnergyRatio = 1;
         tConeClean -= tMu;
         muoConeCleanPtRel = muoPt->at( iMuon ) * (tMu.Vect().Unit() * tConeClean.Vect().Unit());
         tConeClean += tMu; // for IP sign
